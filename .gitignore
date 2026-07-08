@@ -1,0 +1,15 @@
+# Editor directories
+.vscode/
+.idea/
+
+# Vim
+*.swap
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Temporary files
+*.tmp
