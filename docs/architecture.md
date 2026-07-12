@@ -177,6 +177,7 @@ The Kubernetes cluster was bootstrapped with `kubeadm` and currently consists of
 | Worker nodes      | `k8s-worker1`, `k8s-worker2` |
 | Container runtime | `containerd`                 |
 | CNI               | Cilium                       |
+| Observability     | Hubble                       |
 | Cluster DNS       | CoreDNS                      |
 | kube-proxy        | Present                      |
 
@@ -197,6 +198,10 @@ The current architecture has been validated with the following checks:
 * CoreDNS is running.
 * A test workload and ClusterIP service were successfully validated.
 * DNS resolution and pod-to-service connectivity were verified from inside the cluster.
+* Hubble Relay is running.
+* Hubble UI is running.
+* `hubble observe` shows live flow output.
+* Hubble UI access through an SSH tunnel was validated.
 
 ---
 
@@ -206,7 +211,6 @@ This document describes only the architecture that has already been implemented.
 
 The following capabilities are planned for later phases and are not part of the current architecture:
 
-* Hubble
 * Cilium Network Policies
 * WireGuard
 * NFS storage
