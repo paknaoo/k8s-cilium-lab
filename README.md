@@ -37,6 +37,7 @@ flowchart TD
 
     subgraph SERVICES["Cluster Services"]
         CILIUM[Cilium]
+        HUBBLE[Hubble]
         COREDNS[CoreDNS]
         WORKLOADS[Workloads & Services]
     end
@@ -59,6 +60,7 @@ flowchart TD
     WORKER1 --> CILIUM
     WORKER2 --> CILIUM
 
+    CILIUM --> HUBBLE
     CILIUM --> COREDNS
     CILIUM --> WORKLOADS
 ```
@@ -108,6 +110,7 @@ The following components have been successfully deployed and validated.
 * One control plane node and two worker nodes running successfully.
 * `containerd` configured as the container runtime.
 * Cilium installed and operational.
+* Hubble enabled and operational.
 * CoreDNS running successfully.
 * Basic workload networking validated.
 
@@ -120,6 +123,10 @@ The current lab state has been validated through cluster, networking and workloa
 * All Kubernetes nodes report `Ready`.
 * Cilium reports a healthy status.
 * Cilium runs across all Kubernetes nodes.
+* Hubble Relay is running.
+* Hubble UI is running.
+* `hubble observe` shows live flow output.
+* Hubble UI is accessible from the management workstation through an SSH tunnel.
 * CoreDNS pods are running.
 * A test `nginx` deployment was created successfully.
 * A ClusterIP service was tested successfully.
@@ -132,17 +139,16 @@ The current lab state has been validated through cluster, networking and workloa
 
 Planned future work is tracked separately from implemented functionality.
 
-1. Hubble
-2. Cilium Network Policies
-3. WireGuard
-4. NFS storage
-5. Argo CD
-6. cert-manager
-7. Prometheus
-8. Grafana
-9. Load balancing / BGP
-10. Vault
-11. Falco
+1. Cilium Network Policies
+2. WireGuard
+3. NFS storage
+4. Argo CD
+5. cert-manager
+6. Prometheus
+7. Grafana
+8. Load balancing / BGP
+9. Vault
+10. Falco
 
 ---
 
