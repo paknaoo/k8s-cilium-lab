@@ -164,6 +164,6 @@ Validated successfully:
 
 ## Checkpoint
 
-`CHECKPOINT 1.1 PASSED`
+`Phase 01 checkpoint passed`
 
 The VMware networking and pfSense baseline were successfully completed. The environment was ready for Kubernetes node installation and static LAN addressing.

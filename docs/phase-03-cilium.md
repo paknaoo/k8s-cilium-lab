@@ -133,6 +133,6 @@ Current state:
 
 ## Checkpoint
 
-`CHECKPOINT 4.1 PASSED`
+`Phase 03 checkpoint passed`
 
 The three-node Kubernetes cluster is running successfully with Cilium CNI. Basic pod, service and DNS networking have been validated.

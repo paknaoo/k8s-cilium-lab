@@ -185,6 +185,6 @@ Validated successfully:
 
 ## Checkpoint
 
-`CHECKPOINT 3.3 PASSED`
+`Phase 02 checkpoint passed`
 
 The Kubernetes control plane was successfully initialised. The environment was ready for Cilium installation and final cluster networking validation.
