@@ -38,6 +38,7 @@ flowchart TD
     subgraph SERVICES["Cluster Services"]
         CILIUM[Cilium]
         HUBBLE[Hubble]
+        NETPOL[Network Policies]
         COREDNS[CoreDNS]
         WORKLOADS[Workloads & Services]
     end
@@ -61,6 +62,7 @@ flowchart TD
     WORKER2 --> CILIUM
 
     CILIUM --> HUBBLE
+    CILIUM --> NETPOL
     CILIUM --> COREDNS
     CILIUM --> WORKLOADS
 ```
@@ -111,6 +113,7 @@ The following components have been successfully deployed and validated.
 * `containerd` configured as the container runtime.
 * Cilium installed and operational.
 * Hubble enabled and operational.
+* Basic Kubernetes and Cilium network policy behaviour validated.
 * CoreDNS running successfully.
 * Basic workload networking validated.
 
@@ -118,7 +121,7 @@ The following components have been successfully deployed and validated.
 
 ## Validation
 
-The current lab state has been validated through cluster, networking and workload checks.
+The current lab state has been validated through cluster, networking, workload, observability and policy checks.
 
 * All Kubernetes nodes report `Ready`.
 * Cilium reports a healthy status.
@@ -132,6 +135,12 @@ The current lab state has been validated through cluster, networking and workloa
 * A ClusterIP service was tested successfully.
 * DNS resolution from a test pod was verified.
 * Pod-to-service connectivity was verified.
+* Backend default-deny ingress policy was validated.
+* Frontend-to-backend TCP/80 allow policy was validated.
+* Client-to-backend denied flow was validated.
+* Client default-deny egress policy was validated.
+* Client DNS-only egress allow policy was validated.
+* Hubble showed allowed and dropped policy flows.
 
 ---
 
@@ -139,16 +148,15 @@ The current lab state has been validated through cluster, networking and workloa
 
 Planned future work is tracked separately from implemented functionality.
 
-1. Cilium Network Policies
-2. WireGuard
-3. NFS storage
-4. Argo CD
-5. cert-manager
-6. Prometheus
-7. Grafana
-8. Load balancing / BGP
-9. Vault
-10. Falco
+1. WireGuard
+2. NFS storage
+3. Argo CD
+4. cert-manager
+5. Prometheus
+6. Grafana
+7. Load balancing / BGP
+8. Vault
+9. Falco
 
 ---
 
