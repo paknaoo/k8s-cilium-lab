@@ -178,6 +178,7 @@ The Kubernetes cluster was bootstrapped with `kubeadm` and currently consists of
 | Container runtime | `containerd`                 |
 | CNI               | Cilium                       |
 | Observability     | Hubble                       |
+| Network policy | Kubernetes NetworkPolicy and CiliumNetworkPolicy validated |
 | Cluster DNS       | CoreDNS                      |
 | kube-proxy        | Present                      |
 
@@ -202,6 +203,10 @@ The current architecture has been validated with the following checks:
 * Hubble UI is running.
 * `hubble observe` shows live flow output.
 * Hubble UI access through an SSH tunnel was validated.
+* Basic Kubernetes and Cilium network policy behaviour was validated.
+* Ingress default-deny and explicit allow behaviour was verified.
+* Egress default-deny and DNS-only allow behaviour was verified.
+* Hubble showed allowed and dropped policy flows.
 
 ---
 
@@ -211,7 +216,6 @@ This document describes only the architecture that has already been implemented.
 
 The following capabilities are planned for later phases and are not part of the current architecture:
 
-* Cilium Network Policies
 * WireGuard
 * NFS storage
 * Argo CD

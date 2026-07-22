@@ -17,7 +17,7 @@ Implemented in this phase:
 * `hubble observe` validated with live flow output.
 * Hubble UI accessed from the management workstation using an SSH tunnel.
 
-Cilium Network Policies, WireGuard and other roadmap items are not enabled in this phase. They are planned for later phases.
+Cilium Network Policies were not enabled as part of this phase. They are documented separately in [Phase 05 — Network Policies](phase-05-network-policies.md). WireGuard and other roadmap items are planned for later phases.
 
 ---
 
