@@ -27,6 +27,7 @@ flowchart TD
 
     subgraph NETWORK["Network Infrastructure"]
         PFSENSE[pfSense]
+        WG[WireGuard]
     end
 
     subgraph CLUSTER["Kubernetes Cluster"]
@@ -51,7 +52,8 @@ flowchart TD
     VMW --> WORKER1
     VMW --> WORKER2
 
-    MGMT --> PFSENSE
+    MGMT -->|Encrypted management tunnel| WG
+    WG --> PFSENSE
 
     PFSENSE --> MASTER
     PFSENSE --> WORKER1
@@ -65,6 +67,7 @@ flowchart TD
     CILIUM --> NETPOL
     CILIUM --> COREDNS
     CILIUM --> WORKLOADS
+
 ```
 
 ---
@@ -108,6 +111,7 @@ The following components have been successfully deployed and validated.
 * VMware-based lab networking configured.
 * pfSense routing and firewalling operational.
 * Dedicated management workstation deployed.
+* WireGuard management VPN configured with split tunnelling.
 * Three-node Kubernetes cluster deployed using `kubeadm`.
 * One control plane node and two worker nodes running successfully.
 * `containerd` configured as the container runtime.
@@ -121,26 +125,22 @@ The following components have been successfully deployed and validated.
 
 ## Validation
 
-The current lab state has been validated through cluster, networking, workload, observability and policy checks.
+The current lab state has been validated through cluster, networking, workload, observability, policy and VPN checks.
 
 * All Kubernetes nodes report `Ready`.
 * Cilium reports a healthy status.
 * Cilium runs across all Kubernetes nodes.
-* Hubble Relay is running.
-* Hubble UI is running.
+* Hubble Relay and Hubble UI are running.
 * `hubble observe` shows live flow output.
-* Hubble UI is accessible from the management workstation through an SSH tunnel.
 * CoreDNS pods are running.
-* A test `nginx` deployment was created successfully.
-* A ClusterIP service was tested successfully.
-* DNS resolution from a test pod was verified.
-* Pod-to-service connectivity was verified.
-* Backend default-deny ingress policy was validated.
-* Frontend-to-backend TCP/80 allow policy was validated.
-* Client-to-backend denied flow was validated.
-* Client default-deny egress policy was validated.
-* Client DNS-only egress allow policy was validated.
+* Basic deployment, service and DNS connectivity tests passed.
+* Ingress and egress network policy behaviour was validated.
 * Hubble showed allowed and dropped policy flows.
+* WireGuard handshake completed successfully.
+* Split tunnelling was verified.
+* Internet and DNS connectivity remained operational.
+* The Kubernetes LAN is reachable from mgmt through WireGuard.
+* SSH administration through the WireGuard route is working.
 
 ---
 
@@ -148,15 +148,14 @@ The current lab state has been validated through cluster, networking, workload, 
 
 Planned future work is tracked separately from implemented functionality.
 
-1. WireGuard
-2. NFS storage
-3. Argo CD
-4. cert-manager
-5. Prometheus
-6. Grafana
-7. Load balancing / BGP
-8. Vault
-9. Falco
+1. NFS storage
+2. Argo CD
+3. cert-manager
+4. Prometheus
+5. Grafana
+6. Load balancing / BGP
+7. Vault
+8. Falco
 
 ---
 
