@@ -88,7 +88,7 @@ pfSense uses `.254` as the gateway address on routed internal networks.
 
 | VM            | Role                     | Address         |
 | ------------- | ------------------------ | --------------- |
-| `mgmt`        | Management workstation   | `192.168.50.10` |
+| `mgmt`        | Management workstation   | `192.168.50.10`, WireGuard `10.20.20.10` |
 | `k8s-master`  | Kubernetes control plane | `10.10.10.20`   |
 | `k8s-worker1` | Kubernetes worker node   | `10.10.10.21`   |
 | `k8s-worker2` | Kubernetes worker node   | `10.10.10.22`   |
@@ -99,10 +99,11 @@ The Windows host is used only as the VMware Workstation host. Daily administrati
 
 ## IP Plan
 
-| Network           | Purpose                      | Gateway          |
-| ----------------- | ---------------------------- | ---------------- |
+| Network | Purpose | Gateway |
+|---------|---------|---------|
 | `192.168.50.0/24` | OUTSIDE / management network | `192.168.50.254` |
-| `10.10.10.0/24`   | Kubernetes LAN               | `10.10.10.254`   |
+| `10.10.10.0/24` | Kubernetes LAN | `10.10.10.254` |
+| `10.20.20.0/24` | WireGuard management VPN | `10.20.20.254` |
 
 Kubernetes node addressing is static. DHCP on the Kubernetes LAN is not used.
 
@@ -167,6 +168,24 @@ All other traffic is denied by the implicit firewall policy.
 
 ---
 
+## WireGuard Management VPN
+
+WireGuard provides an encrypted and routed management path from the `mgmt` VM through pfSense to the Kubernetes LAN.
+
+| Setting | Value |
+|---------|-------|
+| WireGuard network | `10.20.20.0/24` |
+| pfSense address | `10.20.20.254` |
+| `mgmt` address | `10.20.20.10` |
+| Transport | UDP/51820 |
+| Routing model | Split tunnel |
+
+Traffic for the WireGuard network and Kubernetes LAN uses the tunnel. General internet traffic continues to use the existing OUTSIDE route.
+
+The WireGuard interface on pfSense permits traffic from `NET_WG` to `NET_K8S_LAN`. Handshake traffic is restricted to `HOST_MGMT` on UDP/51820.
+
+---
+
 ## Kubernetes Networking
 
 The Kubernetes cluster was bootstrapped with `kubeadm` and currently consists of one control plane node and two worker nodes.
@@ -207,6 +226,10 @@ The current architecture has been validated with the following checks:
 * Ingress default-deny and explicit allow behaviour was verified.
 * Egress default-deny and DNS-only allow behaviour was verified.
 * Hubble showed allowed and dropped policy flows.
+* WireGuard handshake was validated.
+* Split tunnelling was verified.
+* The Kubernetes LAN is reachable from `mgmt` through WireGuard.
+* Internet and DNS connectivity remain operational outside the tunnel.
 
 ---
 
@@ -216,7 +239,6 @@ This document describes only the architecture that has already been implemented.
 
 The following capabilities are planned for later phases and are not part of the current architecture:
 
-* WireGuard
 * NFS storage
 * Argo CD
 * cert-manager

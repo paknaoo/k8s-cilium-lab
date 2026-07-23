@@ -21,7 +21,7 @@ Implemented in this phase:
 * Cilium egress allow policy applied for DNS access only.
 * Hubble used to observe allowed and denied flows.
 
-WireGuard and other roadmap items are not enabled in this phase. They are planned for later phases.
+WireGuard was not enabled as part of this phase. It is documented separately in [Phase 06 — WireGuard Management VPN](phase-06-wireguard.md). NFS storage and the remaining roadmap items are planned for later phases.
 
 ---
 
@@ -363,4 +363,4 @@ Current state:
 
 `Phase 05 checkpoint passed`
 
-Basic Kubernetes and Cilium network policy enforcement has been validated. The environment is ready for the next roadmap item: WireGuard.
+Basic Kubernetes and Cilium network policy enforcement has been validated. WireGuard management connectivity is documented in the following phase.
