@@ -52,7 +52,7 @@ flowchart TD
     VMW --> WORKER1
     VMW --> WORKER2
 
-    MGMT -->|Encrypted management tunnel| WG
+    MGMT -->|WireGuard IPv4 full tunnel| WG
     WG --> PFSENSE
 
     PFSENSE --> MASTER
@@ -111,7 +111,7 @@ The following components have been successfully deployed and validated.
 * VMware-based lab networking configured.
 * pfSense routing and firewalling operational.
 * Dedicated management workstation deployed.
-* WireGuard management VPN configured with split tunnelling.
+* WireGuard IPv4 full-tunnel VPN configured through pfSense.
 * Three-node Kubernetes cluster deployed using `kubeadm`.
 * One control plane node and two worker nodes running successfully.
 * `containerd` configured as the container runtime.
@@ -137,10 +137,10 @@ The current lab state has been validated through cluster, networking, workload, 
 * Ingress and egress network policy behaviour was validated.
 * Hubble showed allowed and dropped policy flows.
 * WireGuard handshake completed successfully.
-* Split tunnelling was verified.
-* Internet and DNS connectivity remained operational.
-* The Kubernetes LAN is reachable from mgmt through WireGuard.
-* SSH administration through the WireGuard route is working.
+* Internet IPv4 traffic from `mgmt` is routed through the WireGuard tunnel.
+* pfSense Automatic Outbound NAT was validated for the WireGuard network.
+* DNS resolution remained operational.
+* The Kubernetes LAN is reachable from `mgmt` through WireGuard.
 
 ---
 

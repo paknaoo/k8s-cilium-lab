@@ -1,25 +1,23 @@
-# Phase 06 — WireGuard Management VPN
+# Phase 06 — WireGuard Full-Tunnel VPN
 
-This document describes the sixth completed phase of the lab: configuring WireGuard as a routed management VPN between the `mgmt` VM and pfSense.
+This document describes the sixth completed phase of the lab: configuring WireGuard as an IPv4 full-tunnel VPN between the `mgmt` VM and pfSense.
 
 ---
 
 ## Scope
 
-Phase 06 introduced encrypted management connectivity to the Kubernetes LAN.
+Phase 06 introduced encrypted management and internet connectivity through pfSense.
 
 Implemented in this phase:
 
-* WireGuard package installed on pfSense.
-* WireGuard tunnel created on pfSense.
-* WireGuard installed on the `mgmt` VM.
-* Cryptographic keys generated locally on each system.
-* `mgmt` configured as a WireGuard peer.
+* WireGuard installed on pfSense and the `mgmt` VM.
+* WireGuard tunnel configured between `mgmt` and pfSense.
 * WireGuard interface assigned on pfSense.
-* Firewall rules created for tunnel establishment and routed access.
-* Split tunnelling configured.
-* Access from `mgmt` to the Kubernetes LAN validated.
-* Existing internet and DNS connectivity preserved.
+* Firewall rules created for tunnel establishment and routed traffic.
+* pfSense Automatic Outbound NAT verified for the WireGuard network.
+* IPv4 full-tunnel routing enabled on `mgmt`.
+* Kubernetes LAN access through WireGuard validated.
+* Internet and DNS connectivity through the full-tunnel configuration validated.
 
 NFS storage and the remaining roadmap items are not implemented in this phase.
 
@@ -27,7 +25,7 @@ NFS storage and the remaining roadmap items are not implemented in this phase.
 
 ## Traffic Model
 
-WireGuard provides routed and encrypted management access from the `mgmt` VM to the Kubernetes LAN through pfSense.
+All IPv4 traffic from the `mgmt` VM is routed through the encrypted WireGuard tunnel to pfSense.
 
 ```mermaid
 flowchart LR
@@ -41,39 +39,43 @@ flowchart LR
         WORKER2[k8s-worker2]
     end
 
-    MGMT -->|"WireGuard — UDP/51820"| PFSENSE
+    INTERNET[WAN / Internet]
 
+    MGMT -->|"WireGuard full tunnel<br/>UDP/51820"| PFSENSE
     PFSENSE --> MASTER
     PFSENSE --> WORKER1
     PFSENSE --> WORKER2
+    PFSENSE -->|"Automatic Outbound NAT"| INTERNET
+```
+
+Final routing model:
+
+```text
+All IPv4 traffic from mgmt
+  → wg0
+  → pfSense
+  → internal destination or WAN
 ```
 
 ---
 
 ## Addressing
 
-| Component                   | Address           |
-| --------------------------- | ----------------- |
-| WireGuard network           | `10.20.20.0/24`   |
-| pfSense WireGuard interface | `10.20.20.254/24` |
-| `mgmt` WireGuard interface  | `10.20.20.10/24`  |
-| WireGuard transport         | UDP/51820         |
+| Component                   | Address                |
+| --------------------------- | ---------------------- |
+| WireGuard network           | `10.20.20.0/24`        |
+| pfSense WireGuard interface | `10.20.20.254/24`      |
+| `mgmt` WireGuard interface  | `10.20.20.10/24`       |
+| WireGuard endpoint          | `192.168.50.254:51820` |
+| WireGuard transport         | UDP/51820              |
 
-The tunnel uses split tunnelling.
-
-| Destination              | Route                                  |
-| ------------------------ | -------------------------------------- |
-| `10.20.20.0/24`          | WireGuard tunnel                       |
-| `10.10.10.0/24`          | WireGuard tunnel                       |
-| General internet traffic | Existing OUTSIDE route through pfSense |
-
-The configuration intentionally does not route all internet traffic through WireGuard.
+The tunnel is configured for IPv4 only.
 
 ---
 
 ## pfSense Tunnel
 
-The WireGuard package was installed through the pfSense Package Manager and enabled under the VPN configuration.
+The WireGuard package was installed through the pfSense Package Manager.
 
 Tunnel configuration:
 
@@ -82,44 +84,15 @@ Tunnel configuration:
 | Description    | `WG_MGMT`                         |
 | Listen port    | `51820`                           |
 | Tunnel address | `10.20.20.254/24`                 |
-| Key ownership  | Generated and retained on pfSense |
+| Keys           | Generated and retained on pfSense |
 
-The pfSense public key was copied to the `mgmt` configuration. The pfSense private key remained on pfSense.
-
----
-
-## Management VM Keys
-
-WireGuard was installed on the `mgmt` VM:
-
-```bash
-sudo apt update
-sudo apt install -y wireguard
-```
-
-The `mgmt` key pair was generated locally:
-
-```bash
-umask 077
-wg genkey | tee ~/mgmt-wg-private.key | wg pubkey > ~/mgmt-wg-public.key
-```
-
-The public key was added to the pfSense peer configuration. The private key remained local to the `mgmt` VM.
-
-The following security model was used:
-
-```text
-mgmt public key → pfSense peer
-pfSense public key → mgmt WireGuard configuration
-```
-
-Private keys must not be committed to this repository.
+The pfSense public key was added to the `mgmt` configuration. The private key remained on pfSense.
 
 ---
 
-## pfSense Peer
+## Management Peer
 
-A peer representing the `mgmt` VM was added to the `WG_MGMT` tunnel.
+The `mgmt` VM was added as a peer of the `WG_MGMT` tunnel.
 
 | Setting              | Value             |
 | -------------------- | ----------------- |
@@ -129,11 +102,13 @@ A peer representing the `mgmt` VM was added to the `WG_MGMT` tunnel.
 | Persistent keepalive | `25` seconds      |
 | Endpoint             | Not configured    |
 
-The endpoint was left empty on pfSense because the `mgmt` VM initiates the connection.
+The endpoint was left empty on pfSense because the `mgmt` VM initiates the tunnel.
+
+Private keys remain local to their respective systems and must never be committed to this repository.
 
 ---
 
-## Interface and Alias
+## pfSense Interface and Alias
 
 The WireGuard tunnel was assigned as a pfSense interface named:
 
@@ -141,13 +116,13 @@ The WireGuard tunnel was assigned as a pfSense interface named:
 WG
 ```
 
-A network alias was created:
+The following alias represents the WireGuard network:
 
 ```text
 NET_WG = 10.20.20.0/24
 ```
 
-The existing WireGuard port alias was used:
+The existing WireGuard port alias is:
 
 ```text
 PORT_WG = 51820
@@ -159,11 +134,12 @@ PORT_WG = 51820
 
 ### OUTSIDE
 
-The OUTSIDE interface permits the WireGuard handshake from the management VM.
+The OUTSIDE interface permits WireGuard handshake traffic from the management VM.
 
 | Setting          | Value                                |
 | ---------------- | ------------------------------------ |
 | Action           | Pass                                 |
+| Address family   | IPv4                                 |
 | Protocol         | UDP                                  |
 | Source           | `HOST_MGMT`                          |
 | Destination      | pfSense OUTSIDE address              |
@@ -178,17 +154,39 @@ Permitted transport:
 
 ### WireGuard Interface
 
-The WireGuard interface permits routed access from the VPN network to the Kubernetes LAN.
+The WireGuard interface permits the VPN network to reach internal and external IPv4 destinations.
 
-| Setting     | Value                      |
-| ----------- | -------------------------- |
-| Action      | Pass                       |
-| Interface   | `WG`                       |
-| Source      | `NET_WG`                   |
-| Destination | `NET_K8S_LAN`              |
-| Description | Allow WG to Kubernetes LAN |
+| Setting        | Value                            |
+| -------------- | -------------------------------- |
+| Action         | Pass                             |
+| Interface      | `WG`                             |
+| Address family | IPv4                             |
+| Protocol       | Any                              |
+| Source         | `NET_WG`                         |
+| Destination    | Any                              |
+| Description    | Allow NET_WG full tunnel traffic |
 
-ICMP from the WireGuard network to pfSense was also permitted for connectivity testing.
+This permits access from the WireGuard client to:
+
+* pfSense;
+* the Kubernetes LAN;
+* the internet through the pfSense WAN interface.
+
+---
+
+## Automatic Outbound NAT
+
+pfSense remains configured in Automatic Outbound NAT mode.
+
+The automatically generated NAT policy includes:
+
+```text
+10.20.20.0/24 → WAN address
+```
+
+No Hybrid Outbound NAT mode or manually created outbound NAT rule was required.
+
+Internet-bound traffic from the `mgmt` WireGuard address is translated to the pfSense WAN address before leaving the lab.
 
 ---
 
@@ -210,100 +208,112 @@ PrivateKey = <MGMT_PRIVATE_KEY>
 [Peer]
 PublicKey = <PFSENSE_TUNNEL_PUBLIC_KEY>
 Endpoint = 192.168.50.254:51820
-AllowedIPs = 10.20.20.0/24, 10.10.10.0/24
+AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 ```
 
-The configuration must contain placeholders only when documented. Actual private key values must remain outside the repository.
+Actual key values must not be included in the repository.
 
-`AllowedIPs` implements split tunnelling:
-
-```text
-10.20.20.0/24 → WireGuard
-10.10.10.0/24 → WireGuard
-```
-
-The following configuration is intentionally not used:
+The full-tunnel route is enabled by:
 
 ```ini
 AllowedIPs = 0.0.0.0/0
 ```
 
-General internet traffic therefore continues to use the existing OUTSIDE network and pfSense gateway.
+This sends all IPv4 traffic from `mgmt` through WireGuard.
+
+DNS is intentionally not configured in `wg0.conf`. The existing operating system network configuration remains responsible for name resolution.
+
+---
+
+## Configuration Backup
+
+The previous split-tunnel configuration was backed up before enabling the full tunnel:
+
+```bash
+sudo cp /etc/wireguard/wg0.conf \
+  /etc/wireguard/wg0.conf.split-tunnel.backup
+```
+
+The backup remains local to the `mgmt` VM and is not stored in the repository.
 
 ---
 
 ## Service Activation
 
-The WireGuard tunnel was enabled and started using systemd:
+The tunnel is managed through systemd:
 
 ```bash
 sudo systemctl enable --now wg-quick@wg0
 ```
 
-Verification commands:
-
-```bash
-sudo wg show
-ip address show wg0
-ip route get 10.10.10.20
-```
-
----
-
-## DNS Configuration Adjustment
-
-After WireGuard was initially enabled, the `mgmt` VM temporarily lost internet connectivity.
-
-The WireGuard configuration contained:
-
-```ini
-DNS = 1.1.1.1
-```
-
-This entry was removed from `/etc/wireguard/wg0.conf`, allowing the existing OUTSIDE network configuration to remain responsible for DNS resolution.
-
-The tunnel was restarted:
+After changing the routing configuration, the tunnel was restarted:
 
 ```bash
 sudo systemctl restart wg-quick@wg0
 ```
 
-After the adjustment:
+Service and tunnel state were checked with:
 
-* Internet connectivity was restored.
-* DNS resolution worked normally.
-* WireGuard routing remained operational.
-* Split tunnelling continued to work as intended.
+```bash
+sudo systemctl status wg-quick@wg0 --no-pager
+sudo wg show
+```
+
+---
+
+## Endpoint Behaviour
+
+The WireGuard endpoint remains:
+
+```text
+192.168.50.254:51820
+```
+
+Although `AllowedIPs = 0.0.0.0/0` installs a full-tunnel route, connectivity to the WireGuard peer endpoint is preserved so that the tunnel's outer UDP traffic continues to use the OUTSIDE network.
 
 ---
 
 ## Validation
 
-The WireGuard deployment was validated from the `mgmt` VM.
+The IPv4 full tunnel was validated from the `mgmt` VM.
 
 Commands used:
 
 ```bash
-ping -c 3 1.1.1.1
-getent hosts pkgs.k8s.io
 ping -c 3 10.20.20.254
 ping -c 3 10.10.10.20
+ping -c 3 1.1.1.1
+getent hosts pkgs.k8s.io
+curl -4 -I https://pkgs.k8s.io
 sudo wg show
 ```
 
 Validated successfully:
 
-* Internet IPv4 connectivity remained available.
+* WireGuard handshake completed.
+* The pfSense WireGuard address was reachable.
+* The Kubernetes LAN was reachable through WireGuard.
+* Internet IPv4 connectivity worked through the tunnel.
 * DNS resolution remained operational.
-* `mgmt` could reach the pfSense WireGuard address.
-* `mgmt` could reach the Kubernetes control plane through WireGuard.
-* WireGuard handshake completed successfully.
-* WireGuard transmit and receive counters increased.
-* Persistent keepalive was active.
-* Routes to both WireGuard and Kubernetes networks used `wg0`.
-* Internet traffic continued to use the normal OUTSIDE route.
+* HTTPS connectivity worked through the tunnel.
+* WireGuard transmit and receive counters increased during internet traffic.
+* Automatic Outbound NAT translated traffic from `10.20.20.0/24`.
 * SSH access to Kubernetes nodes continued to work.
+
+---
+
+## IPv6 Scope
+
+The full tunnel currently applies to IPv4 only:
+
+```ini
+AllowedIPs = 0.0.0.0/0
+```
+
+IPv6 routing through WireGuard was not implemented.
+
+A dual-stack full tunnel would require IPv6 WireGuard addressing, routing, firewall rules and `::/0` in the peer configuration.
 
 ---
 
@@ -318,24 +328,24 @@ ssh master
 kubectl get nodes
 ```
 
-This is an intentional administration model rather than a WireGuard limitation. The VPN provides routed connectivity to the Kubernetes LAN, while local `kubectl` administration from `mgmt` remains deferred.
+This remains an intentional administration model rather than a WireGuard limitation.
 
 ---
 
 ## Current State
 
-The lab now has an encrypted management path from the `mgmt` VM to the Kubernetes LAN.
+The `mgmt` VM now uses WireGuard as its full IPv4 traffic path through pfSense.
 
 Current state:
 
 * WireGuard installed on pfSense and `mgmt`.
-* Routed WireGuard tunnel operational.
-* Split tunnelling enabled.
-* Internet and DNS connectivity preserved.
-* pfSense WireGuard interface active.
-* Firewall access restricted to the required source and networks.
+* IPv4 full tunnel operational.
 * Kubernetes LAN reachable through WireGuard.
-* SSH administration through the tunnel working.
+* Internet IPv4 traffic routed through WireGuard.
+* Automatic Outbound NAT active for the WireGuard network.
+* DNS resolution preserved through the existing system configuration.
+* SSH administration of Kubernetes nodes working.
+* WireGuard private keys retained only on their respective systems.
 
 ---
 
@@ -343,4 +353,4 @@ Current state:
 
 `Phase 06 checkpoint passed`
 
-WireGuard management connectivity has been installed, configured and validated. The environment is ready for the next roadmap item: NFS storage.
+The WireGuard IPv4 full tunnel has been configured and validated. Management, Kubernetes LAN and internet traffic from `mgmt` now traverse the encrypted tunnel through pfSense.

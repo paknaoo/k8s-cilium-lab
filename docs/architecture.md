@@ -168,21 +168,39 @@ All other traffic is denied by the implicit firewall policy.
 
 ---
 
-## WireGuard Management VPN
+## WireGuard Full-Tunnel VPN
 
-WireGuard provides an encrypted and routed management path from the `mgmt` VM through pfSense to the Kubernetes LAN.
+WireGuard provides an encrypted IPv4 traffic path from the `mgmt` VM through pfSense.
 
-| Setting | Value |
-|---------|-------|
-| WireGuard network | `10.20.20.0/24` |
-| pfSense address | `10.20.20.254` |
-| `mgmt` address | `10.20.20.10` |
-| Transport | UDP/51820 |
-| Routing model | Split tunnel |
+| Setting           | Value                  |
+| ----------------- | ---------------------- |
+| WireGuard network | `10.20.20.0/24`        |
+| pfSense address   | `10.20.20.254`         |
+| `mgmt` address    | `10.20.20.10`          |
+| Endpoint          | `192.168.50.254:51820` |
+| Transport         | UDP/51820              |
+| Routing model     | IPv4 full tunnel       |
+| Outbound NAT      | Automatic              |
 
-Traffic for the WireGuard network and Kubernetes LAN uses the tunnel. General internet traffic continues to use the existing OUTSIDE route.
+The `mgmt` peer uses:
 
-The WireGuard interface on pfSense permits traffic from `NET_WG` to `NET_K8S_LAN`. Handshake traffic is restricted to `HOST_MGMT` on UDP/51820.
+```text
+AllowedIPs = 0.0.0.0/0
+```
+
+All IPv4 traffic from `mgmt` is routed through WireGuard. pfSense routes traffic to internal lab networks and applies Automatic Outbound NAT to internet-bound traffic.
+
+```text
+mgmt
+  → WireGuard
+  → pfSense
+  ├── Kubernetes LAN
+  └── WAN / Internet
+```
+
+The WireGuard endpoint remains on the OUTSIDE network so that the tunnel's outer UDP traffic can continue to reach pfSense.
+
+DNS continues to use the existing operating system network configuration and is not managed by `wg0.conf`.
 
 ---
 
@@ -226,10 +244,11 @@ The current architecture has been validated with the following checks:
 * Ingress default-deny and explicit allow behaviour was verified.
 * Egress default-deny and DNS-only allow behaviour was verified.
 * Hubble showed allowed and dropped policy flows.
-* WireGuard handshake was validated.
-* Split tunnelling was verified.
+* WireGuard IPv4 full-tunnel routing was validated.
 * The Kubernetes LAN is reachable from `mgmt` through WireGuard.
-* Internet and DNS connectivity remain operational outside the tunnel.
+* Internet IPv4 traffic from `mgmt` traverses the WireGuard tunnel.
+* Automatic Outbound NAT was confirmed for `10.20.20.0/24`.
+* DNS resolution remains operational.
 
 ---
 
