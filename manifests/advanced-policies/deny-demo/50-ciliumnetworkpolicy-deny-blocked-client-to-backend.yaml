@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-blocked-client-to-backend
+  namespace: deny-demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: deny-backend
+  ingressDeny:
+  - fromEndpoints:
+    - matchLabels:
+        access: blocked
+    toPorts:
+    - ports:
+      - port: '80'
+        protocol: TCP

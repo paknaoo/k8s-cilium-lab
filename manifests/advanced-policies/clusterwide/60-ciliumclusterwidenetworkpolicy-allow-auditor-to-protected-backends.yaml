@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: allow-auditor-to-protected-backends
+spec:
+  endpointSelector:
+    matchLabels:
+      security-tier: protected
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        access: auditor
+        k8s:io.kubernetes.pod.namespace: ccnp-ops
+    toPorts:
+    - ports:
+      - port: '80'
+        protocol: TCP

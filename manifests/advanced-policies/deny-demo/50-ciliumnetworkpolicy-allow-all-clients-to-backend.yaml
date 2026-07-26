@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-all-clients-to-backend
+  namespace: deny-demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: deny-backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        role: client
+    toPorts:
+    - ports:
+      - port: '80'
+        protocol: TCP

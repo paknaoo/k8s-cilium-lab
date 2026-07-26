@@ -1,0 +1,21 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-public-get-only
+  namespace: l7-demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: l7-backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: l7-client
+    toPorts:
+    - ports:
+      - port: '80'
+        protocol: TCP
+      rules:
+        http:
+        - method: GET
+          path: /public
