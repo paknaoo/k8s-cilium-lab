@@ -20,7 +20,9 @@ Implemented in this phase:
 * Basic workload networking tested.
 * Pod-to-service connectivity verified.
 
-Hubble was not enabled as part of this phase. It is documented separately in [Phase 04 — Hubble Observability](phase-04-hubble.md). Cilium Network Policies and WireGuard are planned for later phases.
+Hubble was not enabled as part of this phase. It is documented separately in [Phase 04 — Hubble Observability](phase-04-hubble.md).
+
+Network policy enforcement and WireGuard management connectivity were implemented and validated in later completed phases.
 
 ---
 

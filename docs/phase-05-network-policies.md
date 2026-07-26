@@ -21,7 +21,9 @@ Implemented in this phase:
 * Cilium egress allow policy applied for DNS access only.
 * Hubble used to observe allowed and denied flows.
 
-WireGuard was not enabled as part of this phase. It is documented separately in [Phase 06 — WireGuard Management VPN](phase-06-wireguard.md). NFS storage and the remaining roadmap items are planned for later phases.
+WireGuard was not enabled as part of this phase. It is documented separately in [Phase 06 — WireGuard Full-Tunnel VPN](phase-06-wireguard.md).
+
+More advanced Cilium policy scenarios are documented in [Phase 08 — Advanced Cilium Policies](phase-08-advanced-cilium-policies.md).
 
 ---
 

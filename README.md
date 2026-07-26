@@ -39,9 +39,9 @@ flowchart TD
     subgraph SERVICES["Cluster Services"]
         CILIUM[Cilium]
         HUBBLE[Hubble]
-        NETPOL[Network Policies]
+        NETPOL[Kubernetes and Cilium Policies]
         COREDNS[CoreDNS]
-        WORKLOADS[Workloads & Services]
+        WORKLOADS[Workloads and Services]
     end
 
     HOST --> VMW
@@ -67,7 +67,6 @@ flowchart TD
     CILIUM --> NETPOL
     CILIUM --> COREDNS
     CILIUM --> WORKLOADS
-
 ```
 
 ---
@@ -78,8 +77,9 @@ The project is designed to build practical experience with Kubernetes networking
 
 * Build a production-inspired Kubernetes networking environment.
 * Deploy and manage a Kubernetes cluster using `kubeadm`.
-* Explore Cilium as an eBPF-based Container Network Interface (CNI).
+* Explore Cilium as an eBPF-based Container Network Interface.
 * Design and validate network segmentation with pfSense.
+* Implement and test Kubernetes and Cilium network policies.
 * Practise Linux-based administration from a dedicated management workstation.
 * Maintain concise, reproducible infrastructure documentation suitable for a technical portfolio.
 
@@ -89,18 +89,21 @@ The project is designed to build practical experience with Kubernetes networking
 
 The following technologies are currently used throughout the project.
 
-| Category                    | Technology               |
-| --------------------------- | ------------------------ |
-| Hypervisor                  | VMware Workstation       |
-| Firewall                    | pfSense CE               |
-| Management Workstation      | Ubuntu Desktop 24.04 LTS |
-| Kubernetes Nodes            | Ubuntu Server 24.04 LTS  |
-| Kubernetes Bootstrap        | kubeadm                  |
-| Container Runtime           | containerd               |
-| Container Network Interface | Cilium                   |
-| Cluster DNS                 | CoreDNS                  |
-| Remote Administration       | OpenSSH                  |
-| Source Control              | Git & GitHub             |
+| Category                    | Technology                                                                             |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| Hypervisor                  | VMware Workstation                                                                     |
+| Firewall                    | pfSense CE                                                                             |
+| Management Workstation      | Ubuntu Desktop 24.04 LTS                                                               |
+| Kubernetes Nodes            | Ubuntu Server 24.04 LTS                                                                |
+| Kubernetes Bootstrap        | kubeadm                                                                                |
+| Container Runtime           | containerd                                                                             |
+| Container Network Interface | Cilium                                                                                 |
+| Cluster DNS                 | CoreDNS                                                                                |
+| Observability               | Hubble Relay, UI and CLI                                                               |
+| Network Policy              | Kubernetes `NetworkPolicy`, `CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` |
+| Management VPN              | WireGuard                                                                              |
+| Remote Administration       | OpenSSH                                                                                |
+| Source Control              | Git and GitHub                                                                         |
 
 ---
 
@@ -115,47 +118,118 @@ The following components have been successfully deployed and validated.
 * Three-node Kubernetes cluster deployed using `kubeadm`.
 * One control plane node and two worker nodes running successfully.
 * `containerd` configured as the container runtime.
-* Cilium installed and operational.
-* Hubble enabled and operational.
-* Basic Kubernetes and Cilium network policy behaviour validated.
+* Cilium installed and operational with Kubernetes IPAM.
+* `kube-proxy` retained with `kubeProxyReplacement=false`.
 * CoreDNS running successfully.
-* Basic workload networking validated.
+* Hubble Relay, UI and CLI enabled and operational.
+* Basic workload, Service and DNS networking validated.
+* Kubernetes default-deny ingress and egress policies validated.
+* Cilium namespace-aware ingress policies validated.
+* DNS-aware and FQDN-based egress policies validated.
+* Layer 7 HTTP method and path filtering validated.
+* `CiliumClusterwideNetworkPolicy` validated across multiple namespaces.
+* Explicit `ingressDeny` precedence over allow policies validated.
+* Cross-node overlay traffic observed with Hubble.
+* Live cluster manifests, status snapshots and validation scripts captured as repository artefacts.
+
+---
+
+## Documentation
+
+Implementation phases:
+
+1. [Phase 01 — Networking Foundation](docs/phase-01-networking.md)
+2. [Phase 02 — Kubernetes Bootstrap](docs/phase-02-kubernetes-bootstrap.md)
+3. [Phase 03 — Cilium Networking](docs/phase-03-cilium.md)
+4. [Phase 04 — Hubble Observability](docs/phase-04-hubble.md)
+5. [Phase 05 — Network Policies](docs/phase-05-network-policies.md)
+6. [Phase 06 — WireGuard Full-Tunnel VPN](docs/phase-06-wireguard.md)
+7. [Phase 07 — Repository Artefacts](docs/phase-07-repository-artefacts.md)
+8. [Phase 08 — Advanced Cilium Policies](docs/phase-08-advanced-cilium-policies.md)
+
+Architecture and troubleshooting:
+
+* [Architecture](docs/architecture.md)
+* [Invalid CiliumNetworkPolicy Default-Deny Attempt](docs/troubleshooting/invalid-cilium-network-policy.md)
+* [Deployment Labels, Pod Templates and Cilium Identities](docs/troubleshooting/deployment-vs-pod-template-labels.md)
 
 ---
 
 ## Validation
 
-The current lab state has been validated through cluster, networking, workload, observability, policy and VPN checks.
+The current lab state has been validated through cluster, networking, workload, observability, policy, VPN and repository checks.
+
+Infrastructure and cluster:
 
 * All Kubernetes nodes report `Ready`.
-* Cilium reports a healthy status.
+* Cilium agents and operator report a healthy status.
 * Cilium runs across all Kubernetes nodes.
+* CoreDNS pods are running.
+* `kube-proxy` remains deployed.
+* Basic Deployment, Service and DNS connectivity tests passed.
+
+Observability:
+
 * Hubble Relay and Hubble UI are running.
 * `hubble observe` shows live flow output.
-* CoreDNS pods are running.
-* Basic deployment, service and DNS connectivity tests passed.
-* Ingress and egress network policy behaviour was validated.
-* Hubble showed allowed and dropped policy flows.
+* Hubble shows `FORWARDED` and `DROPPED` policy verdicts.
+* DNS proxy and Layer 7 HTTP flows are visible.
+* Cross-node traffic shows `to-overlay` routing.
+
+Network policy:
+
+* Basic ingress and egress isolation was validated.
+* Cross-namespace frontend-to-backend TCP/80 traffic is allowed.
+* Untrusted cross-namespace traffic is denied.
+* DNS through CoreDNS is allowed for the controlled frontend.
+* `example.com` HTTPS access is allowed through `toFQDNs`.
+* `github.com` DNS resolution succeeds while HTTPS access is denied.
+* Internal backend access remains allowed by the FQDN egress policy.
+* `GET /public` returns HTTP 200.
+* `GET /admin` and `POST /public` return HTTP 403.
+* The auditor client can reach protected backends across namespaces.
+* The untrusted client cannot reach protected backends.
+* Explicit `ingressDeny` overrides a matching allow policy.
+* Namespaced and cluster-wide Cilium policies report `VALID=True`.
+
+Management VPN:
+
 * WireGuard handshake completed successfully.
 * Internet IPv4 traffic from `mgmt` is routed through the WireGuard tunnel.
 * pfSense Automatic Outbound NAT was validated for the WireGuard network.
 * DNS resolution remained operational.
 * The Kubernetes LAN is reachable from `mgmt` through WireGuard.
 
+Repository artefacts:
+
+* Exported manifests passed Kubernetes server-side dry-run.
+* Validation scripts completed successfully.
+* Cilium and Hubble evidence was captured from the working cluster.
+* Repository artefacts were scanned for sensitive information.
+
 ---
 
 ## Roadmap
 
-Planned future work is tracked separately from implemented functionality.
+Remaining work in this repository:
 
-1. NFS storage
-2. Argo CD
-3. cert-manager
-4. Prometheus
-5. Grafana
-6. Load balancing / BGP
-7. Vault
-8. Falco
+1. **Phase 09 — Service Exposure**
+
+   * Cilium LoadBalancer IPAM.
+   * L2 Announcements.
+   * BGP integration with pfSense.
+2. **Phase 10 — Failure Scenarios and Troubleshooting**
+
+   * Controlled networking and policy failures.
+   * Evidence-based diagnosis and recovery.
+3. **Phase 11 — Automation and Portfolio Polish**
+
+   * Validation automation.
+   * Makefile targets.
+   * Final repository consistency checks.
+   * Portfolio presentation improvements.
+
+Broader GitOps, observability, security and application-platform work will be developed in separate focused repositories.
 
 ---
 

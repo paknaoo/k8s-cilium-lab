@@ -1,14 +1,16 @@
 # Architecture
 
-This document describes the current architecture of the `k8s-cilium-lab` environment. It focuses on the implemented network design, virtual machines, routing model and Kubernetes networking components.
+This document describes the current architecture of the `k8s-cilium-lab` environment. It covers the implemented virtual networks, pfSense routing, WireGuard management path, Kubernetes networking, Cilium policy model and Hubble observability.
+
+Only components that have been implemented and practically validated are presented as part of the current architecture.
 
 ---
 
 ## Overview
 
-The lab is built on VMware Workstation and uses pfSense as the routing and firewall boundary between the management network and the Kubernetes LAN.
+The lab is built on VMware Workstation and uses pfSense as the routing and firewall boundary between the management network, the Kubernetes LAN and the upstream VMware NAT network.
 
-Administration is performed from a dedicated management VM. Kubernetes nodes are placed on a separate LAN behind pfSense, with Cilium providing Kubernetes cluster networking.
+Administration is performed from a dedicated management VM. Kubernetes nodes are placed on a separate LAN behind pfSense, with Cilium providing pod networking and network policy enforcement.
 
 ```mermaid
 flowchart TD
@@ -16,24 +18,31 @@ flowchart TD
     HOST[Windows Host]
     VMW[VMware Workstation]
 
-    subgraph OUTSIDE["OUTSIDE Network - 192.168.50.0/24"]
-        MGMT[mgmt<br/>192.168.50.10]
+    subgraph NAT["VMnet8 — NAT / WAN"]
+        INTERNET[Internet]
     end
 
-    subgraph FIREWALL["Firewall"]
-        PFSENSE[pfSense<br/>OUTSIDE: 192.168.50.254<br/>LAN: 10.10.10.254]
+    subgraph OUTSIDE["VMnet11 — OUTSIDE<br/>192.168.50.0/24"]
+        MGMT["mgmt<br/>192.168.50.10<br/>WireGuard: 10.20.20.10"]
     end
 
-    subgraph LAN["Kubernetes LAN - 10.10.10.0/24"]
-        MASTER[k8s-master<br/>10.10.10.20]
-        WORKER1[k8s-worker1<br/>10.10.10.21]
-        WORKER2[k8s-worker2<br/>10.10.10.22]
+    subgraph FIREWALL["pfSense"]
+        PFSENSE["WAN: DHCP<br/>OUTSIDE: 192.168.50.254<br/>LAN: 10.10.10.254<br/>WG: 10.20.20.254"]
     end
 
-    subgraph K8S["Kubernetes Cluster Networking"]
+    subgraph LAN["VMnet10 — Kubernetes LAN<br/>10.10.10.0/24"]
+        MASTER["k8s-master<br/>10.10.10.20"]
+        WORKER1["k8s-worker1<br/>10.10.10.21"]
+        WORKER2["k8s-worker2<br/>10.10.10.22"]
+    end
+
+    subgraph K8S["Kubernetes Networking"]
         CILIUM[Cilium CNI]
+        KPROXY[kube-proxy]
         COREDNS[CoreDNS]
-        WORKLOADS[Workloads & Services]
+        HUBBLE[Hubble]
+        POLICIES["Kubernetes and Cilium Policies"]
+        WORKLOADS[Workloads and Services]
     end
 
     HOST --> VMW
@@ -44,7 +53,9 @@ flowchart TD
     VMW --> WORKER1
     VMW --> WORKER2
 
-    MGMT --> PFSENSE
+    INTERNET --> PFSENSE
+
+    MGMT -->|"WireGuard IPv4 full tunnel"| PFSENSE
 
     PFSENSE --> MASTER
     PFSENSE --> WORKER1
@@ -54,71 +65,91 @@ flowchart TD
     WORKER1 --> CILIUM
     WORKER2 --> CILIUM
 
+    CILIUM --> HUBBLE
+    CILIUM --> POLICIES
     CILIUM --> COREDNS
     CILIUM --> WORKLOADS
+
+    KPROXY --> WORKLOADS
 ```
 
 ---
 
 ## VMware Networks
 
-| VMware Network | Purpose                      | Subnet               |
-| -------------- | ---------------------------- | -------------------- |
-| VMnet8         | NAT / Internet uplink        | DHCP from VMware NAT |
-| VMnet11        | OUTSIDE / management network | `192.168.50.0/24`    |
-| VMnet10        | Kubernetes LAN               | `10.10.10.0/24`      |
+| VMware Network | Purpose                        | Subnet               |
+| -------------- | ------------------------------ | -------------------- |
+| VMnet8         | NAT and internet uplink        | DHCP from VMware NAT |
+| VMnet11        | OUTSIDE and management network | `192.168.50.0/24`    |
+| VMnet10        | Kubernetes node LAN            | `10.10.10.0/24`      |
 
-VMware provides the virtual switching layer for the lab. pfSense provides routed connectivity between the OUTSIDE network, the Kubernetes LAN and the upstream NAT network.
+VMware provides the virtual switching layer.
+
+pfSense provides routed connectivity and firewall control between:
+
+* the upstream VMware NAT network;
+* the OUTSIDE management network;
+* the Kubernetes LAN;
+* the WireGuard VPN network.
 
 ---
 
 ## pfSense Interfaces
 
-| Interface Role | Purpose                        | Addressing          |
-| -------------- | ------------------------------ | ------------------- |
-| WAN            | Internet uplink via VMware NAT | DHCP                |
-| OUTSIDE        | Management-side network        | `192.168.50.254/24` |
-| LAN            | Kubernetes node network        | `10.10.10.254/24`   |
+| Interface Role | Purpose                            | Addressing          |
+| -------------- | ---------------------------------- | ------------------- |
+| WAN            | Internet uplink through VMware NAT | DHCP                |
+| OUTSIDE        | Management-side network            | `192.168.50.254/24` |
+| LAN            | Kubernetes node network            | `10.10.10.254/24`   |
+| WG             | WireGuard management VPN           | `10.20.20.254/24`   |
 
-pfSense uses `.254` as the gateway address on routed internal networks.
+The lab uses `.254` as the gateway address on routed internal networks.
 
 ---
 
 ## Virtual Machine Inventory
 
-| VM            | Role                     | Address         |
-| ------------- | ------------------------ | --------------- |
+| VM            | Role                     | Address                                  |
+| ------------- | ------------------------ | ---------------------------------------- |
 | `mgmt`        | Management workstation   | `192.168.50.10`, WireGuard `10.20.20.10` |
-| `k8s-master`  | Kubernetes control plane | `10.10.10.20`   |
-| `k8s-worker1` | Kubernetes worker node   | `10.10.10.21`   |
-| `k8s-worker2` | Kubernetes worker node   | `10.10.10.22`   |
+| `k8s-master`  | Kubernetes control plane | `10.10.10.20`                            |
+| `k8s-worker1` | Kubernetes worker node   | `10.10.10.21`                            |
+| `k8s-worker2` | Kubernetes worker node   | `10.10.10.22`                            |
 
-The Windows host is used only as the VMware Workstation host. Daily administration is performed from the `mgmt` VM.
+The Windows host is used as the VMware Workstation host.
+
+Daily administration is performed from the `mgmt` VM.
 
 ---
 
 ## IP Plan
 
-| Network | Purpose | Gateway |
-|---------|---------|---------|
-| `192.168.50.0/24` | OUTSIDE / management network | `192.168.50.254` |
-| `10.10.10.0/24` | Kubernetes LAN | `10.10.10.254` |
-| `10.20.20.0/24` | WireGuard management VPN | `10.20.20.254` |
+| Network           | Purpose                    | Gateway          |
+| ----------------- | -------------------------- | ---------------- |
+| `192.168.50.0/24` | OUTSIDE management network | `192.168.50.254` |
+| `10.10.10.0/24`   | Kubernetes node LAN        | `10.10.10.254`   |
+| `10.20.20.0/24`   | WireGuard management VPN   | `10.20.20.254`   |
 
-Kubernetes node addressing is static. DHCP on the Kubernetes LAN is not used.
+Kubernetes node addressing is static.
 
-Ubuntu systems use the following DNS resolvers:
+DHCP is not used on the Kubernetes LAN.
+
+Ubuntu systems use:
 
 ```text
 1.1.1.1
 8.8.8.8
 ```
 
+as their configured external DNS resolvers.
+
+Inside Kubernetes, CoreDNS provides workload and Service name resolution.
+
 ---
 
-## Traffic Model
+## Infrastructure Traffic Model
 
-The lab follows a segmented traffic model.
+The management path is:
 
 ```text
 Windows Host
@@ -126,6 +157,8 @@ Windows Host
 VMware Workstation
   ↓
 mgmt VM
+  ↓
+WireGuard
   ↓
 pfSense
   ↓
@@ -137,16 +170,19 @@ Kubernetes nodes and workloads
 Key design points:
 
 * The `mgmt` VM is the administrative entry point.
-* pfSense controls routed traffic between the management network and the Kubernetes LAN.
+* pfSense controls routed traffic between internal lab networks.
 * Kubernetes nodes use pfSense as their default gateway.
 * Node-to-node communication occurs on the Kubernetes LAN.
-* Cilium provides Kubernetes pod and service networking inside the cluster.
+* Cilium provides pod networking and policy enforcement.
+* CoreDNS provides Kubernetes Service discovery.
+* Hubble provides flow and policy visibility.
+* `kube-proxy` remains responsible for Kubernetes Service proxying.
 
 ---
 
 ## Firewall Policy Summary
 
-The OUTSIDE interface policy is intentionally restrictive and allows only required management access.
+The OUTSIDE interface policy is intentionally restrictive and permits only required management access.
 
 Implemented OUTSIDE access:
 
@@ -164,7 +200,14 @@ LAN access:
 | -------------- | ----------- | ------------------------------------------ |
 | Kubernetes LAN | Any         | Node outbound connectivity through pfSense |
 
-All other traffic is denied by the implicit firewall policy.
+WireGuard access:
+
+| Source      | Destination               | Purpose                                  |
+| ----------- | ------------------------- | ---------------------------------------- |
+| `HOST_MGMT` | pfSense OUTSIDE UDP/51820 | WireGuard tunnel establishment           |
+| `NET_WG`    | Any IPv4 destination      | Full-tunnel internal and internet access |
+
+All other traffic is denied by the applicable implicit firewall policy.
 
 ---
 
@@ -172,15 +215,15 @@ All other traffic is denied by the implicit firewall policy.
 
 WireGuard provides an encrypted IPv4 traffic path from the `mgmt` VM through pfSense.
 
-| Setting           | Value                  |
-| ----------------- | ---------------------- |
-| WireGuard network | `10.20.20.0/24`        |
-| pfSense address   | `10.20.20.254`         |
-| `mgmt` address    | `10.20.20.10`          |
-| Endpoint          | `192.168.50.254:51820` |
-| Transport         | UDP/51820              |
-| Routing model     | IPv4 full tunnel       |
-| Outbound NAT      | Automatic              |
+| Setting           | Value                          |
+| ----------------- | ------------------------------ |
+| WireGuard network | `10.20.20.0/24`                |
+| pfSense address   | `10.20.20.254`                 |
+| `mgmt` address    | `10.20.20.10`                  |
+| Endpoint          | `192.168.50.254:51820`         |
+| Transport         | UDP/51820                      |
+| Routing model     | IPv4 full tunnel               |
+| Outbound NAT      | pfSense Automatic Outbound NAT |
 
 The `mgmt` peer uses:
 
@@ -188,7 +231,13 @@ The `mgmt` peer uses:
 AllowedIPs = 0.0.0.0/0
 ```
 
-All IPv4 traffic from `mgmt` is routed through WireGuard. pfSense routes traffic to internal lab networks and applies Automatic Outbound NAT to internet-bound traffic.
+All IPv4 traffic from `mgmt` is routed through WireGuard.
+
+pfSense then routes traffic to:
+
+* the Kubernetes LAN;
+* other internal destinations;
+* the WAN and internet.
 
 ```text
 mgmt
@@ -198,71 +247,463 @@ mgmt
   └── WAN / Internet
 ```
 
-The WireGuard endpoint remains on the OUTSIDE network so that the tunnel's outer UDP traffic can continue to reach pfSense.
+The WireGuard endpoint remains reachable through the OUTSIDE network so that the tunnel’s outer UDP traffic can reach pfSense.
 
-DNS continues to use the existing operating system network configuration and is not managed by `wg0.conf`.
+DNS is not configured in `wg0.conf`. The existing operating system network configuration remains responsible for management VM name resolution.
+
+The WireGuard implementation is currently IPv4 only.
 
 ---
 
-## Kubernetes Networking
+## Kubernetes Cluster
 
-The Kubernetes cluster was bootstrapped with `kubeadm` and currently consists of one control plane node and two worker nodes.
+The cluster was bootstrapped with `kubeadm` and consists of one control plane node and two worker nodes.
 
-| Component         | Current State                |
-| ----------------- | ---------------------------- |
-| Control plane     | Running on `k8s-master`      |
-| Worker nodes      | `k8s-worker1`, `k8s-worker2` |
-| Container runtime | `containerd`                 |
-| CNI               | Cilium                       |
-| Observability     | Hubble                       |
-| Network policy | Kubernetes NetworkPolicy and CiliumNetworkPolicy validated |
-| Cluster DNS       | CoreDNS                      |
-| kube-proxy        | Present                      |
+| Component          | Current State                                                            |
+| ------------------ | ------------------------------------------------------------------------ |
+| Control plane      | Running on `k8s-master`                                                  |
+| Worker nodes       | `k8s-worker1`, `k8s-worker2`                                             |
+| Kubernetes version | `v1.36.1`                                                                |
+| Container runtime  | `containerd`                                                             |
+| CNI                | Cilium                                                                   |
+| IPAM               | Kubernetes IPAM                                                          |
+| Service proxy      | `kube-proxy`                                                             |
+| Cluster DNS        | CoreDNS                                                                  |
+| Observability      | Hubble Relay, UI and CLI                                                 |
+| Policy resources   | `NetworkPolicy`, `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy` |
 
-Cilium is installed as the cluster CNI with Kubernetes IPAM enabled. Full kube-proxy replacement is not enabled at this stage.
+Cilium was installed with:
+
+```text
+ipam.mode=kubernetes
+kubeProxyReplacement=false
+```
+
+Full kube-proxy replacement is not enabled.
+
+The `kube-proxy` DaemonSet remains deployed.
+
+---
+
+## Kubernetes Networking Model
+
+Cilium provides:
+
+* pod-to-pod networking;
+* pod-to-Service connectivity;
+* namespace-aware policy enforcement;
+* DNS-aware egress filtering;
+* FQDN-based access control;
+* Layer 7 HTTP filtering;
+* cluster-wide policy enforcement;
+* explicit deny rules;
+* endpoint identities used for policy selection.
+
+CoreDNS provides DNS resolution for:
+
+* Kubernetes Services;
+* namespace-qualified Service names;
+* external names requested by workloads.
+
+Hubble provides evidence of:
+
+* `FORWARDED` flows;
+* `DROPPED` flows;
+* DNS proxy requests;
+* HTTP Layer 7 requests and responses;
+* policy decisions;
+* cross-node `to-overlay` routing.
+
+---
+
+## Advanced Policy Architecture
+
+Phase 08 introduced five isolated policy scenarios.
+
+```mermaid
+flowchart LR
+
+    subgraph CROSS["Cross-Namespace Ingress"]
+        FRONTEND["frontend-zone<br/>app=frontend"]
+        BACKEND["backend-zone<br/>app=backend<br/>TCP/80"]
+        UNTRUSTED["untrusted-zone"]
+
+        FRONTEND -->|"CNP allow"| BACKEND
+        UNTRUSTED -.->|"default-deny"| BACKEND
+    end
+
+    subgraph EGRESS["DNS and FQDN Egress"]
+        EGRESS_CLIENT["frontend-zone/frontend"]
+        DNS["CoreDNS<br/>UDP/TCP 53"]
+        EXAMPLE["example.com<br/>TCP/443"]
+        GITHUB["github.com<br/>TCP/443"]
+        INTERNAL["backend-zone/backend<br/>TCP/80"]
+
+        EGRESS_CLIENT -->|"DNS proxy"| DNS
+        EGRESS_CLIENT -->|"toFQDNs allow"| EXAMPLE
+        EGRESS_CLIENT -.->|"denied"| GITHUB
+        EGRESS_CLIENT -->|"internal allow"| INTERNAL
+    end
+
+    subgraph HTTP["Layer 7 HTTP"]
+        L7CLIENT[l7-client]
+        L7BACKEND[l7-backend]
+
+        L7CLIENT -->|"GET /public — 200"| L7BACKEND
+        L7CLIENT -.->|"GET /admin — 403"| L7BACKEND
+        L7CLIENT -.->|"POST /public — 403"| L7BACKEND
+    end
+
+    subgraph CLUSTERWIDE["Cluster-Wide Policy"]
+        AUDITOR["ccnp-ops<br/>access=auditor"]
+        TEAMA["ccnp-team-a<br/>security-tier=protected"]
+        TEAMB["ccnp-team-b<br/>security-tier=protected"]
+        CCNP_UNTRUSTED[ccnp-untrusted]
+
+        AUDITOR -->|"CCNP TCP/80"| TEAMA
+        AUDITOR -->|"CCNP TCP/80"| TEAMB
+        CCNP_UNTRUSTED -.->|"denied"| TEAMA
+        CCNP_UNTRUSTED -.->|"denied"| TEAMB
+    end
+
+    subgraph EXPLICIT_DENY["Explicit ingressDeny"]
+        TRUSTED["trusted-client<br/>role=client"]
+        BLOCKED["blocked-client<br/>role=client<br/>access=blocked"]
+        DENY_BACKEND[deny-demo/backend]
+
+        TRUSTED -->|"allow"| DENY_BACKEND
+        BLOCKED -.->|"ingressDeny overrides allow"| DENY_BACKEND
+    end
+```
+
+---
+
+## Policy Resource Roles
+
+| Resource                         | Purpose                                                     |
+| -------------------------------- | ----------------------------------------------------------- |
+| Kubernetes `NetworkPolicy`       | Simple default-deny ingress and egress isolation            |
+| `CiliumNetworkPolicy`            | Namespace-aware, DNS, FQDN, Layer 7 and explicit-deny rules |
+| `CiliumClusterwideNetworkPolicy` | Policy selection and enforcement across namespaces          |
+| Hubble                           | Flow, verdict, proxy and routing evidence                   |
+
+Standard Kubernetes `NetworkPolicy` is used where simple default-deny behaviour is required.
+
+Cilium-specific resources are used where the policy requires:
+
+* namespace identities;
+* DNS proxy integration;
+* `toFQDNs`;
+* HTTP method or path filtering;
+* cluster-wide endpoint selection;
+* `ingressDeny`.
+
+---
+
+## Cross-Namespace Ingress
+
+The backend in `backend-zone` is selected by:
+
+```text
+app=backend
+```
+
+A standard Kubernetes `NetworkPolicy` provides default-deny ingress.
+
+A `CiliumNetworkPolicy` permits TCP/80 only from:
+
+```text
+namespace: frontend-zone
+pod label: app=frontend
+```
+
+Validated result:
+
+```text
+frontend-zone  → backend-zone: ALLOWED
+untrusted-zone → backend-zone: DENIED
+```
+
+---
+
+## DNS and FQDN Egress
+
+The `frontend-controlled-egress` policy permits:
+
+* DNS to CoreDNS over UDP/53;
+* DNS to CoreDNS over TCP/53;
+* HTTPS to `example.com` over TCP/443;
+* internal TCP/80 traffic to the backend in `backend-zone`.
+
+DNS resolution and application traffic are evaluated separately.
+
+This produces the validated behaviour:
+
+```text
+example.com DNS:      ALLOWED
+example.com TCP/443:  ALLOWED
+github.com DNS:       ALLOWED
+github.com TCP/443:   DENIED
+internal backend:     ALLOWED
+```
+
+Pods use the Kubernetes resolver configuration with:
+
+```text
+options ndots:5
+```
+
+Names with fewer than five dots may first be queried with Kubernetes search suffixes such as:
+
+```text
+<namespace>.svc.cluster.local
+svc.cluster.local
+cluster.local
+```
+
+These additional DNS requests are expected and are visible through the Cilium DNS proxy and Hubble.
+
+---
+
+## Layer 7 HTTP Enforcement
+
+The `l7-demo` namespace contains:
+
+* `l7-client`;
+* `l7-backend`;
+* the `l7-backend` Service;
+* the `l7-nginx-config` ConfigMap.
+
+The `allow-public-get-only` policy permits only:
+
+```text
+GET /public
+```
+
+Validated result:
+
+```text
+GET  /public → HTTP 200
+GET  /admin  → HTTP 403
+POST /public → HTTP 403
+```
+
+Hubble shows:
+
+* the allowed request as `FORWARDED`;
+* denied requests as policy drops;
+* proxy-generated HTTP 403 responses returning to the client.
+
+A forwarded 403 response represents the proxy delivering a denial response. It does not mean that the original request was permitted.
+
+---
+
+## Cluster-Wide Policy
+
+The cluster-wide policy selects backend pods with:
+
+```text
+security-tier=protected
+```
+
+The authorised operational client uses:
+
+```text
+access=auditor
+```
+
+One `CiliumClusterwideNetworkPolicy` permits the auditor to reach protected backends on TCP/80 across both team namespaces.
+
+Validated result:
+
+```text
+auditor → ccnp-team-a/backend: ALLOWED
+auditor → ccnp-team-b/backend: ALLOWED
+
+untrusted → ccnp-team-a/backend: DENIED
+untrusted → ccnp-team-b/backend: DENIED
+```
+
+Hubble also showed `to-overlay` traffic for cross-node communication.
+
+---
+
+## Explicit Deny
+
+The `deny-demo` scenario separates the general allow rule from the explicit deny rule.
+
+The allow policy permits:
+
+```text
+role=client → backend TCP/80
+```
+
+The deny policy rejects:
+
+```text
+access=blocked → backend TCP/80
+```
+
+Validated result:
+
+```text
+trusted-client: ALLOWED
+blocked-client: DENIED
+```
+
+The blocked client matches the general allow rule and the explicit deny rule.
+
+The explicit deny rule takes precedence, even when the allow and deny rules are defined in separate Cilium policy objects.
+
+---
+
+## Cilium Identities and Pod Labels
+
+Cilium applies policy to pod endpoints and their identities.
+
+For Deployment-managed workloads, policy-relevant labels must exist under:
+
+```text
+spec.template.metadata.labels
+```
+
+Adding a label only to:
+
+```text
+metadata.labels
+```
+
+on the Deployment object does not add that label to the pods.
+
+After the pod templates were corrected:
+
+* Kubernetes created replacement pods;
+* the new pods received the required labels;
+* Cilium assigned identities based on the corrected label sets;
+* the policy selectors matched as expected.
+
+Older Hubble `DENIED` events were associated with earlier pods that did not contain the required labels.
+
+Current policy diagnosis must therefore consider:
+
+* event timestamps;
+* pod names;
+* pod lifecycle;
+* endpoint identities;
+* labels present when the event occurred.
+
+---
+
+## Observability Model
+
+Hubble Relay aggregates flow data from Cilium agents across the cluster.
+
+Flow visibility is available through:
+
+* Hubble CLI;
+* Hubble Relay;
+* Hubble UI through an SSH local port forward.
+
+The Hubble UI access path is:
+
+```text
+mgmt browser
+  → localhost:12000
+  → SSH local port forward
+  → k8s-master localhost:12000
+  → cilium hubble ui
+```
+
+Useful evidence includes:
+
+```text
+FORWARDED
+DROPPED
+to-overlay
+DNS proxy requests
+HTTP methods and paths
+HTTP 200 and 403 responses
+```
+
+Hubble snapshots are point-in-time evidence and do not replace live validation.
 
 ---
 
 ## Validation Snapshot
 
-The current architecture has been validated with the following checks:
+The current architecture has been validated with the following checks.
+
+Infrastructure and cluster:
 
 * pfSense has working upstream connectivity.
-* `mgmt` can reach pfSense.
+* `mgmt` can reach and administer pfSense.
 * `mgmt` can SSH to all Kubernetes nodes.
 * Kubernetes nodes can reach the internet through pfSense.
 * All Kubernetes nodes report `Ready`.
 * Cilium reports a healthy status.
 * CoreDNS is running.
-* A test workload and ClusterIP service were successfully validated.
-* DNS resolution and pod-to-service connectivity were verified from inside the cluster.
+* `kube-proxy` remains deployed.
+* Workload, Service and DNS connectivity is operational.
+
+Observability:
+
 * Hubble Relay is running.
 * Hubble UI is running.
-* `hubble observe` shows live flow output.
+* Hubble CLI returns live flow output.
 * Hubble UI access through an SSH tunnel was validated.
-* Basic Kubernetes and Cilium network policy behaviour was validated.
-* Ingress default-deny and explicit allow behaviour was verified.
-* Egress default-deny and DNS-only allow behaviour was verified.
-* Hubble showed allowed and dropped policy flows.
+* `FORWARDED` and `DROPPED` flows were captured.
+* DNS proxy behaviour was observed.
+* HTTP Layer 7 filtering was observed.
+* Cross-node `to-overlay` traffic was observed.
+
+Network policy:
+
+* Basic default-deny ingress and egress behaviour was validated.
+* Cross-namespace ingress selection was validated.
+* DNS-aware and FQDN egress was validated.
+* Layer 7 HTTP method and path filtering was validated.
+* Cluster-wide policy was validated.
+* Explicit `ingressDeny` precedence was validated.
+* Namespaced and cluster-wide Cilium policies report `VALID=True`.
+
+WireGuard:
+
 * WireGuard IPv4 full-tunnel routing was validated.
-* The Kubernetes LAN is reachable from `mgmt` through WireGuard.
+* The Kubernetes LAN is reachable through WireGuard.
 * Internet IPv4 traffic from `mgmt` traverses the WireGuard tunnel.
 * Automatic Outbound NAT was confirmed for `10.20.20.0/24`.
 * DNS resolution remains operational.
+
+Repository artefacts:
+
+* Live resources were exported and cleaned.
+* Generated manifests passed server-side dry-run.
+* Validation scripts completed successfully.
+* Hubble scenario evidence was captured.
+* Repository artefacts were scanned for sensitive information.
 
 ---
 
 ## Current Scope
 
-This document describes only the architecture that has already been implemented.
+This document describes the architecture implemented through Phase 08.
 
-The following capabilities are planned for later phases and are not part of the current architecture:
+The remaining repository phases are:
 
-* NFS storage
-* Argo CD
-* cert-manager
-* Prometheus
-* Grafana
-* Load balancing / BGP
-* Vault
-* Falco
+1. **Phase 09 — Service Exposure**
+
+   * Cilium LoadBalancer IPAM.
+   * L2 Announcements.
+   * BGP integration with pfSense.
+2. **Phase 10 — Failure Scenarios and Troubleshooting**
+
+   * Controlled failures.
+   * Diagnosis and recovery evidence.
+3. **Phase 11 — Automation and Portfolio Polish**
+
+   * Validation automation.
+   * Makefile targets.
+   * Repository consistency checks.
+   * Final portfolio presentation.
+
+These capabilities are not presented as part of the current implemented architecture until they have been deployed and practically validated.

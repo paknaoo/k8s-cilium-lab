@@ -19,7 +19,7 @@ Implemented in this phase:
 * Kubernetes LAN access through WireGuard validated.
 * Internet and DNS connectivity through the full-tunnel configuration validated.
 
-NFS storage and the remaining roadmap items are not implemented in this phase.
+This phase is limited to the validated WireGuard IPv4 full-tunnel implementation. Kubernetes service exposure and other later repository work are documented in their respective phases.
 
 ---
 
