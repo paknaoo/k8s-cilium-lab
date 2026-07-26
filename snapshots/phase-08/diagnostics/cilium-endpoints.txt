@@ -1,0 +1,21 @@
+NAMESPACE        NAME                                SECURITY IDENTITY   INGRESS ENFORCEMENT   EGRESS ENFORCEMENT   ENDPOINT STATE   IPV4           IPV6
+backend-zone     backend-5cd5459484-8xflt            8401                                                           ready            10.244.1.252   
+ccnp-ops         ops-client-59bcd7f4c6-vqmzx         6957                                                           ready            10.244.2.106   
+ccnp-team-a      backend-7dbf8fd45b-nc652            7939                                                           ready            10.244.2.246   
+ccnp-team-b      backend-7dbf8fd45b-f9jlf            18780                                                          ready            10.244.1.193   
+ccnp-untrusted   untrusted-client-86b6c7d566-qdlnc   18398                                                          ready            10.244.1.91    
+default          nginx-test-66d4b69bf4-cmlft         12035                                                          ready            10.244.1.208   
+deny-demo        backend-db9548689-hmpqv             21107                                                          ready            10.244.2.3     
+deny-demo        blocked-client-7f785dc47c-fg5cs     25914                                                          ready            10.244.2.48    
+deny-demo        trusted-client-d6bfd74cc-bwc8f      12579                                                          ready            10.244.1.47    
+frontend-zone    frontend-6b6c8479c6-lgm7t           61162                                                          ready            10.244.2.34    
+kube-system      coredns-589f44dc88-4p5kh            14327                                                          ready            10.244.0.238   
+kube-system      coredns-589f44dc88-s9shj            14327                                                          ready            10.244.1.152   
+kube-system      hubble-relay-599d47597b-8zpsw       36220                                                          ready            10.244.2.133   
+kube-system      hubble-ui-6b4f8fcff9-r89p8          5858                                                           ready            10.244.1.52    
+l7-demo          l7-backend-767bd874cc-5wklf         51566                                                          ready            10.244.2.209   
+l7-demo          l7-client-69f997759c-vmh8f          44504                                                          ready            10.244.1.29    
+netpol-demo      backend-7bc769bfc6-7jx89            8391                                                           ready            10.244.2.207   
+netpol-demo      client-b5b66f96b-s8bwb              13988                                                          ready            10.244.2.6     
+netpol-demo      frontend-7449dcb56b-48kbc           43351                                                          ready            10.244.2.32    
+untrusted-zone   untrusted-client-66cf8c8c6-n2tt7    64189                                                          ready            10.244.1.150   

@@ -1,0 +1,823 @@
+
+Policy inventory
+================
+NAMESPACE      NAME                           POD-SELECTOR   AGE
+backend-zone   backend-default-deny-ingress   app=backend    127m
+netpol-demo    backend-default-deny-ingress   app=backend    3d20h
+netpol-demo    client-default-deny-egress     app=client     3d20h
+NAMESPACE       NAME                             AGE     VALID
+backend-zone    allow-frontend-zone-to-backend   124m    True
+deny-demo       allow-all-clients-to-backend     66m     True
+deny-demo       deny-blocked-client-to-backend   64m     True
+frontend-zone   frontend-controlled-egress       116m    True
+l7-demo         allow-public-get-only            103m    True
+netpol-demo     allow-client-dns-egress          3d20h   True
+netpol-demo     allow-frontend-to-backend        3d20h   True
+NAME                                  VALID
+allow-auditor-to-protected-backends   True
+
+backend-zone    allow-frontend-zone-to-backend   124m    True
+deny-demo       allow-all-clients-to-backend     66m     True
+deny-demo       deny-blocked-client-to-backend   64m     True
+frontend-zone   frontend-controlled-egress       116m    True
+l7-demo         allow-public-get-only            103m    True
+netpol-demo     allow-client-dns-egress          3d20h   True
+netpol-demo     allow-frontend-to-backend        3d20h   True
+PASS: All CiliumNetworkPolicy objects report VALID=True
+
+allow-auditor-to-protected-backends   True
+PASS: All CiliumClusterwideNetworkPolicy objects report VALID=True
+
+8.1 Cross-namespace ingress
+===========================
+
+TEST: frontend-zone frontend reaches backend-zone backend on TCP/80
+PASS: frontend-zone frontend reaches backend-zone backend on TCP/80
+
+TEST: untrusted-zone client is denied access to backend-zone backend
+curl: (28) Connection timed out after 5003 milliseconds
+command terminated with exit code 28
+PASS: untrusted-zone client is denied access to backend-zone backend
+
+8.2 DNS and FQDN egress
+=======================
+
+TEST: frontend can resolve example.com through CoreDNS
+Server:		10.96.0.10
+Address:	10.96.0.10:53
+
+Non-authoritative answer:
+Name:	example.com
+Address: 2606:4700:10::ac42:93f3
+Name:	example.com
+Address: 2606:4700:10::6814:179a
+
+Non-authoritative answer:
+Name:	example.com
+Address: 104.20.23.154
+Name:	example.com
+Address: 172.66.147.243
+
+PASS: frontend can resolve example.com through CoreDNS
+
+TEST: frontend can access example.com on TCP/443
+PASS: frontend can access example.com on TCP/443
+
+TEST: frontend can resolve github.com through CoreDNS
+Server:		10.96.0.10
+Address:	10.96.0.10:53
+
+Non-authoritative answer:
+
+Non-authoritative answer:
+Name:	github.com
+Address: 20.26.156.215
+
+PASS: frontend can resolve github.com through CoreDNS
+
+TEST: frontend HTTPS access to github.com is denied
+curl: (28) Connection timed out after 8002 milliseconds
+command terminated with exit code 28
+PASS: frontend HTTPS access to github.com is denied
+
+TEST: frontend retains access to the internal backend on TCP/80
+PASS: frontend retains access to the internal backend on TCP/80
+
+8.3 Layer 7 HTTP policy
+=======================
+
+TEST: GET /public is allowed
+HTTP status: 200
+PASS: GET /public is allowed
+
+TEST: GET /admin is denied by the L7 policy
+HTTP status: 403
+PASS: GET /admin is denied by the L7 policy
+
+TEST: POST /public is denied by the L7 policy
+HTTP status: 403
+PASS: POST /public is denied by the L7 policy
+
+8.4 Cluster-wide policy
+=======================
+
+TEST: auditor reaches the protected backend in ccnp-team-a
+PASS: auditor reaches the protected backend in ccnp-team-a
+
+TEST: auditor reaches the protected backend in ccnp-team-b
+PASS: auditor reaches the protected backend in ccnp-team-b
+
+TEST: untrusted client is denied access to ccnp-team-a
+curl: (28) Connection timed out after 5003 milliseconds
+command terminated with exit code 28
+PASS: untrusted client is denied access to ccnp-team-a
+
+TEST: untrusted client is denied access to ccnp-team-b
+curl: (28) Connection timed out after 5002 milliseconds
+command terminated with exit code 28
+PASS: untrusted client is denied access to ccnp-team-b
+
+8.5 Explicit ingressDeny
+========================
+
+TEST: trusted client reaches the deny-demo backend
+PASS: trusted client reaches the deny-demo backend
+
+TEST: blocked client is denied despite the separate allow policy
+curl: (28) Connection timed out after 5001 milliseconds
+command terminated with exit code 28
+PASS: blocked client is denied despite the separate allow policy
+
+Pod-template label verification
+===============================
+NAME      POD_TEMPLATE_LABELS
+backend   map[app:backend security-tier:protected]
+NAME      POD_TEMPLATE_LABELS
+backend   map[app:backend security-tier:protected]
+NAME         POD_TEMPLATE_LABELS
+ops-client   map[access:auditor app:ops-client]
+NAME             POD_TEMPLATE_LABELS
+backend          map[app:deny-backend]
+blocked-client   map[access:blocked app:blocked-client role:client]
+trusted-client   map[access:trusted app:trusted-client role:client]
+
+Cilium endpoint identities
+==========================
+backend-zone     backend-5cd5459484-8xflt            8401                                                           ready            10.244.1.252   
+ccnp-ops         ops-client-59bcd7f4c6-vqmzx         6957                                                           ready            10.244.2.106   
+ccnp-team-a      backend-7dbf8fd45b-nc652            7939                                                           ready            10.244.2.246   
+ccnp-team-b      backend-7dbf8fd45b-f9jlf            18780                                                          ready            10.244.1.193   
+ccnp-untrusted   untrusted-client-86b6c7d566-qdlnc   18398                                                          ready            10.244.1.91    
+deny-demo        backend-db9548689-hmpqv             21107                                                          ready            10.244.2.3     
+deny-demo        blocked-client-7f785dc47c-fg5cs     25914                                                          ready            10.244.2.48    
+deny-demo        trusted-client-d6bfd74cc-bwc8f      12579                                                          ready            10.244.1.47    
+frontend-zone    frontend-6b6c8479c6-lgm7t           61162                                                          ready            10.244.2.34    
+l7-demo          l7-backend-767bd874cc-5wklf         51566                                                          ready            10.244.2.209   
+l7-demo          l7-client-69f997759c-vmh8f          44504                                                          ready            10.244.1.29    
+untrusted-zone   untrusted-client-66cf8c8c6-n2tt7    64189                                                          ready            10.244.1.150   
+
+Hubble FORWARDED evidence
+=========================
+Jul 26 18:16:19.385: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:19.411: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.637: frontend-zone/frontend-6b6c8479c6-lgm7t:55369 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:19.637: frontend-zone/frontend-6b6c8479c6-lgm7t:55369 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.638: frontend-zone/frontend-6b6c8479c6-lgm7t:47150 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:19.638: frontend-zone/frontend-6b6c8479c6-lgm7t:47150 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.639: frontend-zone/frontend-6b6c8479c6-lgm7t:36916 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:19.639: frontend-zone/frontend-6b6c8479c6-lgm7t:36916 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:20.779: kube-system/coredns-589f44dc88-4p5kh:58894 (ID:14327) <- 10.10.10.20:443 (host) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:20.779: kube-system/coredns-589f44dc88-4p5kh:58894 (ID:14327) -> 10.10.10.20:6443 (host) to-stack FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:21.795: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:25.603: 10.244.0.206:60084 (remote-node) <> 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:25.734: 10.244.0.206:40534 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:25.734: 10.244.0.206:40534 (host) <- kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:25.734: 10.244.0.206:40534 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:25.735: 10.244.0.206:40534 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:25.735: 10.244.0.206:40534 (host) <- kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:25.735: 10.244.0.206:40534 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:25.735: 10.244.0.206:40534 (host) <- kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:25.735: 10.244.0.206:40534 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:26.182: 10.244.0.206:60084 (remote-node) <> 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:26.854: 10.244.0.206:49604 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:26.854: 10.244.0.206:49604 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:26.854: 10.244.0.206:49604 (host) <- kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:26.854: 10.244.0.206:49604 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:26.855: 10.244.0.206:49604 (host) <- kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:26.855: 10.244.0.206:49604 (host) <- kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:26.855: 10.244.0.206:49604 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:26.855: 10.244.0.206:49604 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:27.804: frontend-zone/frontend-6b6c8479c6-lgm7t:44677 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:27.805: frontend-zone/frontend-6b6c8479c6-lgm7t:44677 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.806: frontend-zone/frontend-6b6c8479c6-lgm7t:41473 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:27.807: frontend-zone/frontend-6b6c8479c6-lgm7t:41473 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.807: frontend-zone/frontend-6b6c8479c6-lgm7t:57661 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.057: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36962 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:27.808: frontend-zone/frontend-6b6c8479c6-lgm7t:57661 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.808: frontend-zone/frontend-6b6c8479c6-lgm7t:49394 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:27.808: frontend-zone/frontend-6b6c8479c6-lgm7t:49394 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.019: l7-demo/l7-client-69f997759c-vmh8f:48014 (ID:44504) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.019: l7-demo/l7-client-69f997759c-vmh8f:48014 (ID:44504) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.655: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60683 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.655: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60683 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.655: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47405 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.656: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47405 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.658: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54001 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.658: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54001 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.852: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:36942 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.852: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60438 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.852: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60438 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.853: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:36942 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.854: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:34688 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.854: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:34688 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.057: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:44646 (ID:18398) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.057: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42531 (ID:18398) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.057: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42531 (ID:18398) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.058: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:51505 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.059: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:51505 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.059: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:29.061: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:37994 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.423: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-proxy FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.423: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.424: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.424: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 403 0ms (POST http://l7-backend/public))
+Jul 26 18:16:28.425: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-proxy FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.425: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.636: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:59149 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.636: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:56942 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.638: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:56942 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.638: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60683 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.638: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:59149 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.639: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47405 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.639: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60683 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.639: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:40693 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.640: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55629 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.640: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47405 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.640: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:40693 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.641: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54661 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.641: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55629 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.641: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54001 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.642: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54661 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.642: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54001 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.643: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN ALLOWED (TCP Flags: SYN)
+Jul 26 18:16:28.643: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:28.643: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) <- ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:28.643: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.643: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.643: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) <- ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.644: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.644: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) <- ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.644: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:46912 (ID:6957) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.834: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:52043 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.834: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:43873 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.835: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:52043 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.835: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:36942 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.835: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:43873 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.835: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60438 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.836: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60438 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.836: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:57988 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.836: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:36942 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55737 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:57988 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47507 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55737 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:34688 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.838: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47507 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.838: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:34688 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:28.838: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:28.839: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) <- ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-endpoint FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:28.839: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.840: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.840: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) <- ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.841: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.842: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) <- ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:29.061: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:37994 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:47130 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:47130 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36384 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36384 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36962 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.801: 10.244.1.39:36382 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:29.801: 10.244.1.39:36382 (host) <- kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:29.801: 10.244.1.39:36382 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:29.802: 10.244.1.39:36382 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:29.802: 10.244.1.39:36382 (host) <- kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:29.802: 10.244.1.39:36382 (host) <- kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:29.802: 10.244.1.39:36382 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.195: 10.244.2.108:57306 (remote-node) <> 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.212: 10.244.1.39:38414 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:30.212: 10.244.1.39:38414 (host) <- kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:30.212: 10.244.1.39:38414 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.212: 10.244.1.39:38414 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.213: 10.244.1.39:38414 (host) <- kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.213: 10.244.1.39:38414 (host) <- kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.213: 10.244.1.39:38414 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.213: 10.244.1.39:38414 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.803: 10.244.1.39:47124 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:30.803: 10.244.1.39:47124 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:30.803: 10.244.1.39:47124 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.804: 10.244.1.39:47124 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.804: 10.244.1.39:47124 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.804: 10.244.1.39:47124 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.804: 10.244.1.39:47124 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.804: 10.244.1.39:47124 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.899: 10.244.1.39:47132 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:32.254: 10.244.1.39:58726 (remote-node) <> 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:33.779: kube-system/hubble-relay-599d47597b-8zpsw:36292 (ID:36220) <- 10.10.10.20:4244 (kube-apiserver) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:33.779: kube-system/hubble-relay-599d47597b-8zpsw:36292 (ID:36220) -> 10.10.10.20:4244 (kube-apiserver) to-stack FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:33.845: kube-system/hubble-relay-599d47597b-8zpsw:59296 (ID:36220) <- 10.10.10.21:4244 (remote-node) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:33.845: kube-system/hubble-relay-599d47597b-8zpsw:59296 (ID:36220) -> 10.10.10.21:4244 (remote-node) to-stack FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:34.066: kube-system/hubble-relay-599d47597b-8zpsw:52964 (ID:36220) <- 10.10.10.22:4244 (host) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:34.066: kube-system/hubble-relay-599d47597b-8zpsw:52964 (ID:36220) -> 10.10.10.22:4244 (host) to-stack FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:34.213: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:39371 (ID:18398) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36962 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.064: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:51505 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:29.064: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:51505 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.604: 10.244.0.206:55920 (host) -> 10.244.0.174:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:29.605: 10.244.0.206:55920 (host) <- 10.244.0.174:4240 (health) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.211: 10.244.2.108:57306 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.211: 10.244.2.108:57306 (remote-node) -> 10.244.0.174:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:30.710: kube-system/coredns-589f44dc88-4p5kh:58894 (ID:14327) <- 10.10.10.20:443 (host) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:30.710: kube-system/coredns-589f44dc88-4p5kh:58894 (ID:14327) -> 10.10.10.20:6443 (host) to-stack FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:32.260: 10.244.1.39:58726 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:32.260: 10.244.1.39:58726 (remote-node) -> 10.244.0.174:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:34.213: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:32852 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.213: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:39371 (ID:18398) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.213: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43428 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43428 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:50493 (ID:18398) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:32852 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40595 (ID:18398) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40595 (ID:18398) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:50493 (ID:18398) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36502 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43364 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.215: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43364 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.215: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:48720 (ID:18398) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.215: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36502 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.216: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:48720 (ID:18398) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.219: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:32852 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.219: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43428 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.219: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43428 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.220: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:32852 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.220: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36502 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.220: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43364 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:34.221: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43364 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.221: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36502 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.233: 10.244.0.206 (host) -> 10.244.0.174 (health) to-endpoint FORWARDED (ICMPv4 EchoRequest)
+Jul 26 18:16:34.233: 10.244.0.206 (host) <- 10.244.0.174 (health) to-stack FORWARDED (ICMPv4 EchoReply)
+Jul 26 18:16:34.620: 10.244.2.108:36958 (host) -> 10.244.2.36:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:34.620: 10.244.2.108 (host) -> 10.244.2.36 (health) to-endpoint FORWARDED (ICMPv4 EchoRequest)
+Jul 26 18:16:34.620: 10.244.2.108 (host) <- 10.244.2.36 (health) to-stack FORWARDED (ICMPv4 EchoReply)
+Jul 26 18:16:34.620: 10.244.2.108:36958 (host) <- 10.244.2.36:4240 (health) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:35.143: kube-system/coredns-589f44dc88-s9shj:45106 (ID:14327) -> 10.10.10.20:6443 (kube-apiserver) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:35.144: kube-system/coredns-589f44dc88-s9shj:45106 (ID:14327) <- 10.10.10.20:443 (kube-apiserver) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:35.734: 10.244.0.206:56780 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:35.734: 10.244.0.206:56780 (host) <- kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:35.734: 10.244.0.206:56780 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:35.735: 10.244.0.206:56780 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:35.735: 10.244.0.206:56780 (host) <- kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:35.735: 10.244.0.206:56780 (host) <- kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:35.735: 10.244.0.206:56780 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:35.735: 10.244.0.206:56780 (host) -> kube-system/coredns-589f44dc88-4p5kh:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:36.333: 10.244.2.108:57954 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:36.333: 10.244.2.108:57954 (host) <- kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:36.333: 10.244.2.108:57954 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:36.333: 10.244.2.108:57954 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.334: 10.244.2.108:57954 (host) <- kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:36.335: 10.244.2.108:57954 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:36.335: 10.244.2.108:57954 (host) <- kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:36.335: 10.244.2.108:57954 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.339: 10.244.0.206:47524 (remote-node) -> 10.244.2.36:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.339: 10.244.0.206:47524 (remote-node) <- 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.355: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.854: 10.244.0.206:60808 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:36.854: 10.244.0.206:60808 (host) <- kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:36.854: 10.244.0.206:60808 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.855: 10.244.0.206:60808 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:36.855: 10.244.0.206:60808 (host) -> kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:36.855: 10.244.0.206:60808 (host) <- kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:36.855: 10.244.0.206:60808 (host) <- kube-system/coredns-589f44dc88-4p5kh:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:37.040: 10.244.2.108:57966 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:37.041: 10.244.2.108:57966 (host) <- kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:37.041: 10.244.2.108:57966 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:37.041: 10.244.2.108:57966 (host) <- kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:37.041: 10.244.2.108:57966 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:37.042: 10.244.2.108:57966 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:37.042: 10.244.2.108:57966 (host) <- kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:37.042: 10.244.2.108:57966 (host) -> kube-system/hubble-relay-599d47597b-8zpsw:4222 (ID:36220) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:37.155: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.396: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN ALLOWED (TCP Flags: SYN)
+Jul 26 18:16:39.396: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:39.396: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:39.396: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.396: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.397: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.398: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.398: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.399: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.405: deny-demo/trusted-client-d6bfd74cc-bwc8f:60217 (ID:12579) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.405: deny-demo/trusted-client-d6bfd74cc-bwc8f:60217 (ID:12579) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.405: deny-demo/trusted-client-d6bfd74cc-bwc8f:43408 (ID:12579) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.406: deny-demo/trusted-client-d6bfd74cc-bwc8f:43408 (ID:12579) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.406: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:39.407: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:39.407: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.407: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.408: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.409: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.409: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.598: deny-demo/blocked-client-7f785dc47c-fg5cs:51683 (ID:25914) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.598: deny-demo/blocked-client-7f785dc47c-fg5cs:51485 (ID:25914) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.599: deny-demo/blocked-client-7f785dc47c-fg5cs:51683 (ID:25914) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.599: deny-demo/blocked-client-7f785dc47c-fg5cs:51485 (ID:25914) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.615: deny-demo/blocked-client-7f785dc47c-fg5cs:51683 (ID:25914) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.615: deny-demo/blocked-client-7f785dc47c-fg5cs:51683 (ID:25914) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.615: deny-demo/blocked-client-7f785dc47c-fg5cs:51485 (ID:25914) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.615: deny-demo/blocked-client-7f785dc47c-fg5cs:51485 (ID:25914) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-endpoint FORWARDED (UDP)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) <- kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) <- kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) <- kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.802: 10.244.1.39:55380 (host) -> kube-system/coredns-589f44dc88-s9shj:8181 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:40.212: 10.244.1.39:53034 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:40.212: 10.244.1.39:53034 (host) <- kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:40.212: 10.244.1.39:53034 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:40.212: 10.244.1.39:53034 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:40.213: 10.244.1.39:53034 (host) <- kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:40.213: 10.244.1.39:53034 (host) <- kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:40.213: 10.244.1.39:53034 (host) -> kube-system/coredns-589f44dc88-s9shj:8080 (ID:14327) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:40.804: 10.244.1.39:52250 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:40.804: 10.244.1.39:52250 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:40.804: 10.244.1.39:52250 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:40.804: 10.244.1.39:52250 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:40.805: 10.244.1.39:52250 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:40.805: 10.244.1.39:52250 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:40.805: 10.244.1.39:52250 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:40.805: 10.244.1.39:52250 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:40.899: 10.244.1.39:52254 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:40.899: 10.244.1.39:52254 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:40.899: 10.244.1.39:52254 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:40.899: 10.244.1.39:52254 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:40.899: 10.244.1.39:52254 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:40.900: 10.244.1.39:52254 (host) <- kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-stack FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:40.900: 10.244.1.39:52254 (host) -> kube-system/hubble-ui-6b4f8fcff9-r89p8:8081 (ID:5858) to-endpoint FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:41.010: 10.244.2.108:36958 (host) -> 10.244.2.36:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:41.010: 10.244.2.108:36958 (host) <- 10.244.2.36:4240 (health) to-stack FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:41.536: 10.244.0.206:60084 (remote-node) <- 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:41.536: 10.244.0.206:60084 (remote-node) -> 10.244.1.219:4240 (health) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:41.746: kube-system/hubble-relay-599d47597b-8zpsw:43636 (ID:36220) <- 10.10.10.22:443 (host) to-endpoint FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:41.746: kube-system/hubble-relay-599d47597b-8zpsw:43636 (ID:36220) -> 10.10.10.22:4244 (host) to-stack FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:43.584: 10.244.1.39:49140 (host) <- 10.244.1.219:4240 (health) to-stack FORWARDED (TCP Flags: ACK)
+PASS: Hubble returned recent FORWARDED flows
+
+Hubble DROPPED evidence
+=======================
+Jul 26 17:49:50.723: fe80::dce9:a0ff:fe4a:752c (ID:14327) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 17:57:35.462: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:33294 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 17:57:35.462: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:33294 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 17:57:36.507: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:33294 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 17:57:36.507: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:33294 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 17:57:37.531: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:33294 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 17:57:37.531: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:33294 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:00:12.400: deny-demo/blocked-client-7f785dc47c-fg5cs:44904 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:00:12.400: deny-demo/blocked-client-7f785dc47c-fg5cs:44904 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:00:13.458: deny-demo/blocked-client-7f785dc47c-fg5cs:44904 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:00:13.458: deny-demo/blocked-client-7f785dc47c-fg5cs:44904 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:00:14.482: deny-demo/blocked-client-7f785dc47c-fg5cs:44904 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:00:14.482: deny-demo/blocked-client-7f785dc47c-fg5cs:44904 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:02:59.776: fe80::40c0:aeff:fe05:2f30 (ID:64189) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:02:59.776: fe80::4c39:84ff:fe9b:5b10 (ID:5858) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:03:02.546: fe80::c31:8ff:fe5e:79cd (ID:61162) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:05:46.386: fe80::1c47:bfff:fee9:e768 (ID:6957) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:07:21.920: fe80::10db:78ff:fe27:3cf5 (ID:18780) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:07:21.920: fe80::1010:77ff:fe7c:2ab8 (ID:8401) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:10:41.298: fe80::d04d:2eff:fef0:fbb9 (ID:25914) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:11:46.834: fe80::50fa:c3ff:fe4b:725e (ID:13988) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:11:46.834: fe80::1c88:82ff:feaa:4ab7 (ID:43351) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+Jul 26 18:15:01.185: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:01.185: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:02.208: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:02.208: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:03.232: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:03.232: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:04.256: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:04.256: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:05.280: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:05.280: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:42420 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:07.067: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:07.067: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:08.114: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:08.114: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:09.139: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:09.139: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:10.162: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:10.162: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:11.186: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:11.186: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:12.210: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:12.210: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:14.258: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:14.258: frontend-zone/frontend-6b6c8479c6-lgm7t:37260 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:15.501: l7-demo/l7-client-69f997759c-vmh8f:57868 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 GET http://l7-backend/admin)
+Jul 26 18:15:15.642: l7-demo/l7-client-69f997759c-vmh8f:57880 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 POST http://l7-backend/public)
+Jul 26 18:15:16.101: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:16.101: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:17.111: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:17.111: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:18.134: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:18.134: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:19.159: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:19.159: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:20.182: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:20.182: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:57770 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:21.273: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:21.273: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:22.304: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:22.304: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:23.327: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:23.327: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:24.352: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:24.352: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:25.375: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:25.375: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:40838 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:15:26.601: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:26.601: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:15:27.634: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:27.634: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:15:28.658: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:28.658: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:15:29.682: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:29.682: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:15:30.706: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:15:30.706: deny-demo/blocked-client-7f785dc47c-fg5cs:34966 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:16:13.684: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:13.684: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:14.720: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:14.720: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:15.744: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:15.744: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:16.768: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:16.768: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:17.792: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:17.792: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:57238 (ID:64189) <> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:19.624: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:19.624: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:20.626: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:20.626: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:21.650: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:21.650: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:22.674: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:22.674: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:23.699: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:23.699: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:24.722: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:24.722: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:26.770: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:26.771: frontend-zone/frontend-6b6c8479c6-lgm7t:57758 (ID:61162) <> 20.26.156.215:443 (world) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:28.205: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 GET http://l7-backend/admin)
+Jul 26 18:16:28.424: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 POST http://l7-backend/public)
+Jul 26 18:16:29.049: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:29.049: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:30.069: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:30.069: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:31.093: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:31.093: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:32.117: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:32.117: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:33.141: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:33.141: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) <> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:34.216: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:34.216: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:35.264: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:35.264: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:36.288: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:36.288: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:37.312: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:37.312: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:38.336: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:38.336: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:59890 (ID:18398) <> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) Policy denied DROPPED (TCP Flags: SYN)
+Jul 26 18:16:39.599: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:39.599: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:16:40.658: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:40.658: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:16:41.683: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:41.683: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:16:42.706: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:42.706: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+Jul 26 18:16:43.730: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) policy-verdict:none TRAFFIC_DIRECTION_UNKNOWN DENIED (TCP Flags: SYN)
+Jul 26 18:16:43.730: deny-demo/blocked-client-7f785dc47c-fg5cs:59916 (ID:25914) <> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) Policy denied by denylist DROPPED (TCP Flags: SYN)
+PASS: Hubble returned recent DROPPED flows
+
+Hubble Layer 7 evidence
+=======================
+Jul 26 18:16:19.051: frontend-zone/frontend-6b6c8479c6-lgm7t:45825 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy example.com.svc.cluster.local. A))
+Jul 26 18:16:19.051: frontend-zone/frontend-6b6c8479c6-lgm7t:51431 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query example.com.cluster.local. A)
+Jul 26 18:16:19.051: frontend-zone/frontend-6b6c8479c6-lgm7t:35842 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy example.com.cluster.local. AAAA))
+Jul 26 18:16:19.052: frontend-zone/frontend-6b6c8479c6-lgm7t:39521 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query example.com. AAAA)
+Jul 26 18:16:19.053: frontend-zone/frontend-6b6c8479c6-lgm7t:51431 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy example.com.cluster.local. A))
+Jul 26 18:16:19.054: frontend-zone/frontend-6b6c8479c6-lgm7t:38842 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query example.com. A)
+Jul 26 18:16:19.056: frontend-zone/frontend-6b6c8479c6-lgm7t:38842 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer "172.66.147.243,104.20.23.154" TTL: 30 (Proxy example.com. A))
+Jul 26 18:16:19.084: frontend-zone/frontend-6b6c8479c6-lgm7t:39521 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer "2606:4700:10::6814:179a,2606:4700:10::ac42:93f3" TTL: 30 (Proxy example.com. AAAA))
+Jul 26 18:16:19.368: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com. AAAA)
+Jul 26 18:16:19.369: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com. A)
+Jul 26 18:16:19.395: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer  TTL: 4294967295 (Proxy github.com. AAAA))
+Jul 26 18:16:19.421: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer "20.26.156.215" TTL: 30 (Proxy github.com. A))
+Jul 26 18:16:19.613: frontend-zone/frontend-6b6c8479c6-lgm7t:58235 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com.frontend-zone.svc.cluster.local. A)
+Jul 26 18:16:19.614: frontend-zone/frontend-6b6c8479c6-lgm7t:56054 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com.frontend-zone.svc.cluster.local. AAAA)
+Jul 26 18:16:19.615: frontend-zone/frontend-6b6c8479c6-lgm7t:58235 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy github.com.frontend-zone.svc.cluster.local. A))
+Jul 26 18:16:19.616: frontend-zone/frontend-6b6c8479c6-lgm7t:50906 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com.svc.cluster.local. A)
+Jul 26 18:16:19.617: frontend-zone/frontend-6b6c8479c6-lgm7t:56054 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy github.com.frontend-zone.svc.cluster.local. AAAA))
+Jul 26 18:16:19.617: frontend-zone/frontend-6b6c8479c6-lgm7t:50906 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy github.com.svc.cluster.local. A))
+Jul 26 18:16:19.617: frontend-zone/frontend-6b6c8479c6-lgm7t:36605 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com.svc.cluster.local. AAAA)
+Jul 26 18:16:19.618: frontend-zone/frontend-6b6c8479c6-lgm7t:57124 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com.cluster.local. A)
+Jul 26 18:16:19.619: frontend-zone/frontend-6b6c8479c6-lgm7t:36605 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy github.com.svc.cluster.local. AAAA))
+Jul 26 18:16:19.620: frontend-zone/frontend-6b6c8479c6-lgm7t:55369 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com.cluster.local. AAAA)
+Jul 26 18:16:19.620: frontend-zone/frontend-6b6c8479c6-lgm7t:57124 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy github.com.cluster.local. A))
+Jul 26 18:16:19.621: frontend-zone/frontend-6b6c8479c6-lgm7t:47150 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com. A)
+Jul 26 18:16:19.621: frontend-zone/frontend-6b6c8479c6-lgm7t:55369 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy github.com.cluster.local. AAAA))
+Jul 26 18:16:19.622: frontend-zone/frontend-6b6c8479c6-lgm7t:36916 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query github.com. AAAA)
+Jul 26 18:16:19.623: frontend-zone/frontend-6b6c8479c6-lgm7t:47150 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer "20.26.156.215" TTL: 30 (Proxy github.com. A))
+Jul 26 18:16:19.624: frontend-zone/frontend-6b6c8479c6-lgm7t:36916 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer  TTL: 4294967295 (Proxy github.com. AAAA))
+Jul 26 18:16:27.787: frontend-zone/frontend-6b6c8479c6-lgm7t:44677 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local.frontend-zone.svc.cluster.local. A)
+Jul 26 18:16:27.787: frontend-zone/frontend-6b6c8479c6-lgm7t:36701 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local.frontend-zone.svc.cluster.local. AAAA)
+Jul 26 18:16:27.788: frontend-zone/frontend-6b6c8479c6-lgm7t:44677 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local.frontend-zone.svc.cluster.local. A))
+Jul 26 18:16:27.789: frontend-zone/frontend-6b6c8479c6-lgm7t:41473 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local.svc.cluster.local. A)
+Jul 26 18:16:27.790: frontend-zone/frontend-6b6c8479c6-lgm7t:36701 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local.frontend-zone.svc.cluster.local. AAAA))
+Jul 26 18:16:27.790: frontend-zone/frontend-6b6c8479c6-lgm7t:57661 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local.svc.cluster.local. AAAA)
+Jul 26 18:16:27.791: frontend-zone/frontend-6b6c8479c6-lgm7t:41473 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local.svc.cluster.local. A))
+Jul 26 18:16:27.791: frontend-zone/frontend-6b6c8479c6-lgm7t:49394 (ID:61162) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local.cluster.local. A)
+Jul 26 18:16:27.791: frontend-zone/frontend-6b6c8479c6-lgm7t:57661 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local.svc.cluster.local. AAAA))
+Jul 26 18:16:27.792: frontend-zone/frontend-6b6c8479c6-lgm7t:49394 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local.cluster.local. A))
+Jul 26 18:16:27.792: frontend-zone/frontend-6b6c8479c6-lgm7t:42977 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local.cluster.local. AAAA)
+Jul 26 18:16:27.793: frontend-zone/frontend-6b6c8479c6-lgm7t:42654 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local. A)
+Jul 26 18:16:27.794: frontend-zone/frontend-6b6c8479c6-lgm7t:42977 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer RCode: Non-Existent Domain TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local.cluster.local. AAAA))
+Jul 26 18:16:27.795: frontend-zone/frontend-6b6c8479c6-lgm7t:42654 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer "10.110.156.85" TTL: 30 (Proxy backend.backend-zone.svc.cluster.local. A))
+Jul 26 18:16:27.795: frontend-zone/frontend-6b6c8479c6-lgm7t:44240 (ID:61162) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-request proxy FORWARDED (DNS Query backend.backend-zone.svc.cluster.local. AAAA)
+Jul 26 18:16:27.797: frontend-zone/frontend-6b6c8479c6-lgm7t:44240 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) dns-response proxy FORWARDED (DNS Answer  TTL: 4294967295 (Proxy backend.backend-zone.svc.cluster.local. AAAA))
+Jul 26 18:16:28.005: l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request FORWARDED (HTTP/1.1 GET http://l7-backend/public)
+Jul 26 18:16:28.008: l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 200 2ms (GET http://l7-backend/public))
+Jul 26 18:16:28.205: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 GET http://l7-backend/admin)
+Jul 26 18:16:28.205: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 403 0ms (GET http://l7-backend/admin))
+Jul 26 18:16:28.424: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 POST http://l7-backend/public)
+Jul 26 18:16:28.424: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 403 0ms (POST http://l7-backend/public))
+PASS: Hubble returned the expected HTTP 200 and 403 proxy responses
+
+Hubble overlay-routing evidence
+===============================
+Jul 26 18:16:27.789: frontend-zone/frontend-6b6c8479c6-lgm7t:41473 (ID:61162) <> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.790: frontend-zone/frontend-6b6c8479c6-lgm7t:57661 (ID:61162) <> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.791: frontend-zone/frontend-6b6c8479c6-lgm7t:49394 (ID:61162) <> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.799: frontend-zone/frontend-6b6c8479c6-lgm7t:36701 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.804: frontend-zone/frontend-6b6c8479c6-lgm7t:42977 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.804: frontend-zone/frontend-6b6c8479c6-lgm7t:42654 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.807: frontend-zone/frontend-6b6c8479c6-lgm7t:44240 (ID:61162) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.809: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) <- backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:27.810: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) <- backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:27.811: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) <- backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.012: l7-demo/l7-client-69f997759c-vmh8f:48014 (ID:44504) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.014: l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:28.015: l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.015: l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.022: l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.214: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:28.215: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.215: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.217: l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:27.792: frontend-zone/frontend-6b6c8479c6-lgm7t:42977 (ID:61162) <> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.433: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:28.433: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.434: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.436: l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.648: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:56942 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.649: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:59149 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.651: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:40693 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.652: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55629 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.652: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54661 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.845: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:52043 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.845: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:43873 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.847: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:57988 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.848: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55737 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.848: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47507 (ID:6957) <- kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.850: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) <- ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:28.851: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) <- ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.852: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) <- ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:29.055: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:37994 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.055: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:47130 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.056: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36384 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.056: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36962 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.793: frontend-zone/frontend-6b6c8479c6-lgm7t:42654 (ID:61162) <> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.795: frontend-zone/frontend-6b6c8479c6-lgm7t:44240 (ID:61162) <> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.058: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:51505 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.059: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:42624 (ID:18398) -> ccnp-team-a/backend-7dbf8fd45b-nc652:80 (ID:7939) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:27.798: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) -> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:27.798: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) -> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:27.799: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) -> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:27.801: frontend-zone/frontend-6b6c8479c6-lgm7t:38082 (ID:61162) -> backend-zone/backend-5cd5459484-8xflt:80 (ID:8401) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.004: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:28.005: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.009: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.011: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51368 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.204: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:15:57.731: 10.244.2.108:57306 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:01.539: 10.244.1.39:58726 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:06.147: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:06.435: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:10.822: 10.244.0.206:60084 (remote-node) <> 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:13.509: frontend-zone/frontend-6b6c8479c6-lgm7t:41340 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.513: frontend-zone/frontend-6b6c8479c6-lgm7t:58172 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.514: frontend-zone/frontend-6b6c8479c6-lgm7t:51883 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.516: frontend-zone/frontend-6b6c8479c6-lgm7t:41809 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.516: frontend-zone/frontend-6b6c8479c6-lgm7t:35331 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.687: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:43501 (ID:64189) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.687: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:56418 (ID:64189) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.688: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:56828 (ID:64189) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.689: untrusted-zone/untrusted-client-66cf8c8c6-n2tt7:53912 (ID:64189) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:13.827: 10.244.2.108:57306 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:15.177: 10.244.2.108 (remote-node) <- 10.244.0.174 (health) to-overlay FORWARDED (ICMPv4 EchoReply)
+Jul 26 18:16:15.942: 10.244.1.39:58726 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:18.885: frontend-zone/frontend-6b6c8479c6-lgm7t:56544 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.063: frontend-zone/frontend-6b6c8479c6-lgm7t:40582 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.063: frontend-zone/frontend-6b6c8479c6-lgm7t:47329 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.066: frontend-zone/frontend-6b6c8479c6-lgm7t:49054 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.204: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.205: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.206: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51382 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.422: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:28.423: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.424: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.425: l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) <> l7-demo/l7-client-69f997759c-vmh8f:51394 (ID:44504) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:28.636: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:59149 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.636: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:56942 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.638: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60683 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.639: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47405 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.639: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:40693 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.640: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55629 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.641: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54661 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.641: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54001 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.834: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:52043 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.834: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:43873 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.835: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:36942 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.835: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60438 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.836: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:57988 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:55737 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47507 (ID:6957) -> kube-system/coredns-589f44dc88-s9shj:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.837: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:34688 (ID:6957) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.068: frontend-zone/frontend-6b6c8479c6-lgm7t:35842 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.068: frontend-zone/frontend-6b6c8479c6-lgm7t:51431 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.071: frontend-zone/frontend-6b6c8479c6-lgm7t:38842 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.411: frontend-zone/frontend-6b6c8479c6-lgm7t:41667 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.637: frontend-zone/frontend-6b6c8479c6-lgm7t:55369 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.638: frontend-zone/frontend-6b6c8479c6-lgm7t:47150 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:19.639: frontend-zone/frontend-6b6c8479c6-lgm7t:36916 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:21.795: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:25.603: 10.244.0.206:60084 (remote-node) <> 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:26.182: 10.244.0.206:60084 (remote-node) <> 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:27.805: frontend-zone/frontend-6b6c8479c6-lgm7t:44677 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.807: frontend-zone/frontend-6b6c8479c6-lgm7t:41473 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.808: frontend-zone/frontend-6b6c8479c6-lgm7t:57661 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:27.808: frontend-zone/frontend-6b6c8479c6-lgm7t:49394 (ID:61162) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.019: l7-demo/l7-client-69f997759c-vmh8f:48014 (ID:44504) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.655: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60683 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.656: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:47405 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.658: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:54001 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.852: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:60438 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.853: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:36942 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.854: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:34688 (ID:6957) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.061: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:37994 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:47130 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36384 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.062: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36962 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:29.064: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:51505 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:30.211: 10.244.2.108:57306 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:32.254: 10.244.1.39:58726 (remote-node) <> 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:32.260: 10.244.1.39:58726 (remote-node) <- 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:34.213: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:32852 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.213: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43428 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:28.838: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:28.839: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:28.840: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:28.841: ccnp-ops/ops-client-59bcd7f4c6-vqmzx:45756 (ID:6957) -> ccnp-team-b/backend-7dbf8fd45b-f9jlf:80 (ID:18780) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:30.195: 10.244.2.108:57306 (remote-node) <> 10.244.0.174:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36502 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.214: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43364 (ID:18398) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.219: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43428 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.220: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:32852 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.221: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:43364 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:34.221: ccnp-untrusted/untrusted-client-86b6c7d566-qdlnc:36502 (ID:18398) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:36.339: 10.244.0.206:47524 (remote-node) <- 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:36.355: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:37.155: 10.244.0.206:47524 (remote-node) <> 10.244.2.36:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.396: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: SYN, ACK)
+Jul 26 18:16:39.397: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.398: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) <- deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.406: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: SYN)
+Jul 26 18:16:39.407: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:39.407: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, PSH)
+Jul 26 18:16:39.409: deny-demo/trusted-client-d6bfd74cc-bwc8f:43892 (ID:12579) -> deny-demo/backend-db9548689-hmpqv:80 (ID:21107) to-overlay FORWARDED (TCP Flags: ACK, FIN)
+Jul 26 18:16:39.598: deny-demo/blocked-client-7f785dc47c-fg5cs:51683 (ID:25914) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.598: deny-demo/blocked-client-7f785dc47c-fg5cs:51485 (ID:25914) -> kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.615: deny-demo/blocked-client-7f785dc47c-fg5cs:51683 (ID:25914) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:39.615: deny-demo/blocked-client-7f785dc47c-fg5cs:51485 (ID:25914) <- kube-system/coredns-589f44dc88-4p5kh:53 (ID:14327) to-overlay FORWARDED (UDP)
+Jul 26 18:16:41.536: 10.244.0.206:60084 (remote-node) <- 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+Jul 26 18:16:41.542: 10.244.0.206:60084 (remote-node) <> 10.244.1.219:4240 (health) to-overlay FORWARDED (TCP Flags: ACK)
+PASS: Hubble returned cross-node to-overlay flows
+
+kube-proxy state
+================
+NAME         DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+kube-proxy   3         3         3       3            3           kubernetes.io/os=linux   48d
+PASS: kube-proxy remains deployed
+
+Summary
+=======
+All Phase 8 advanced policy validation checks passed.

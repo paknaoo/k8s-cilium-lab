@@ -1,0 +1,6 @@
+Jul 26 17:55:20.582: l7-demo/l7-client-69f997759c-vmh8f:55324 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request FORWARDED (HTTP/1.1 GET http://l7-backend/public)
+Jul 26 17:55:20.584: l7-demo/l7-client-69f997759c-vmh8f:55324 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 200 2ms (GET http://l7-backend/public))
+Jul 26 17:55:20.720: l7-demo/l7-client-69f997759c-vmh8f:55340 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 GET http://l7-backend/admin)
+Jul 26 17:55:20.720: l7-demo/l7-client-69f997759c-vmh8f:55340 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 403 0ms (GET http://l7-backend/admin))
+Jul 26 17:55:20.857: l7-demo/l7-client-69f997759c-vmh8f:55350 (ID:44504) -> l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-request DROPPED (HTTP/1.1 POST http://l7-backend/public)
+Jul 26 17:55:20.857: l7-demo/l7-client-69f997759c-vmh8f:55350 (ID:44504) <- l7-demo/l7-backend-767bd874cc-5wklf:80 (ID:51566) http-response FORWARDED (HTTP/1.1 403 0ms (POST http://l7-backend/public))

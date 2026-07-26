@@ -1,0 +1,2 @@
+NAME         DEPLOYMENT_LABELS                    POD_TEMPLATE_LABELS
+ops-client   map[access:auditor app:ops-client]   map[access:auditor app:ops-client]

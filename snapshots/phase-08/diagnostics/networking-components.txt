@@ -1,0 +1,12 @@
+cilium-8w5v2                         1/1     Running   6 (3h53m ago)   48d     10.10.10.20    k8s-master    <none>           <none>
+cilium-envoy-d4gwh                   1/1     Running   6 (3h53m ago)   48d     10.10.10.22    k8s-worker2   <none>           <none>
+cilium-envoy-nmrhr                   1/1     Running   6 (3h53m ago)   48d     10.10.10.21    k8s-worker1   <none>           <none>
+cilium-envoy-xtdn4                   1/1     Running   6 (3h53m ago)   48d     10.10.10.20    k8s-master    <none>           <none>
+cilium-fz7fk                         1/1     Running   6 (3h53m ago)   48d     10.10.10.21    k8s-worker1   <none>           <none>
+cilium-operator-fcbc76b9d-24ttz      1/1     Running   8 (3h41m ago)   48d     10.10.10.20    k8s-master    <none>           <none>
+cilium-sn22v                         1/1     Running   6 (3h53m ago)   48d     10.10.10.22    k8s-worker2   <none>           <none>
+hubble-relay-599d47597b-8zpsw        1/1     Running   4 (3h53m ago)   13d     10.244.2.133   k8s-worker2   <none>           <none>
+hubble-ui-6b4f8fcff9-r89p8           2/2     Running   8 (3h53m ago)   13d     10.244.1.52    k8s-worker1   <none>           <none>
+kube-proxy-hcs6g                     1/1     Running   6 (3h53m ago)   48d     10.10.10.22    k8s-worker2   <none>           <none>
+kube-proxy-p899h                     1/1     Running   6 (3h53m ago)   48d     10.10.10.21    k8s-worker1   <none>           <none>
+kube-proxy-rpc74                     1/1     Running   6 (3h53m ago)   48d     10.10.10.20    k8s-master    <none>           <none>

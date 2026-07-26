@@ -1,0 +1,4 @@
+NAMESPACE      NAME                           POD-SELECTOR   AGE
+backend-zone   backend-default-deny-ingress   app=backend    77m
+netpol-demo    backend-default-deny-ingress   app=backend    3d20h
+netpol-demo    client-default-deny-egress     app=client     3d19h

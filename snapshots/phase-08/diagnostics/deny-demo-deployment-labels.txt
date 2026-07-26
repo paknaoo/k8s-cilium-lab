@@ -1,0 +1,4 @@
+NAME             DEPLOYMENT_LABELS   POD_TEMPLATE_LABELS
+backend          <none>              map[app:deny-backend]
+blocked-client   <none>              map[access:blocked app:blocked-client role:client]
+trusted-client   <none>              map[access:trusted app:trusted-client role:client]
