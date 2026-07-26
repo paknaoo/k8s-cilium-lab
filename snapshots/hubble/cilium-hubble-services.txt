@@ -1,0 +1,8 @@
+service/cilium-envoy   ClusterIP   None             <none>        9964/TCP                 48d
+service/hubble-peer    ClusterIP   10.99.221.18     <none>        443/TCP                  48d
+service/hubble-relay   ClusterIP   10.103.7.74      <none>        80/TCP                   13d
+service/hubble-ui      ClusterIP   10.110.197.208   <none>        80/TCP                   13d
+endpoints/cilium-envoy   10.10.10.20:9964,10.10.10.21:9964,10.10.10.22:9964                48d
+endpoints/hubble-peer    10.10.10.20:4244,10.10.10.21:4244,10.10.10.22:4244                48d
+endpoints/hubble-relay   10.244.2.133:4245                                                 13d
+endpoints/hubble-ui      10.244.1.52:8081                                                  13d
