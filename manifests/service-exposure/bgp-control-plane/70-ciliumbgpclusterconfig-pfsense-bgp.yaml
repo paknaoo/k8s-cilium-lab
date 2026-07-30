@@ -1,0 +1,18 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: pfsense-bgp
+spec:
+  bgpInstances:
+  - localASN: 64513
+    name: pfsense
+    peers:
+    - name: pfsense-lan
+      peerASN: 64512
+      peerAddress: 10.10.10.254
+      peerConfigRef:
+        name: pfsense-peer
+  nodeSelector:
+    matchExpressions:
+    - key: node-role.kubernetes.io/control-plane
+      operator: DoesNotExist

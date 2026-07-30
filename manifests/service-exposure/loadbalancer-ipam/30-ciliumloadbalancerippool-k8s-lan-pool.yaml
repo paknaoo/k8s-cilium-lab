@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: k8s-lan-pool
+spec:
+  blocks:
+  - start: 10.10.10.200
+    stop: 10.10.10.220
+  disabled: false
+  serviceSelector:
+    matchLabels:
+      lb-ipam: lan

@@ -1,0 +1,15 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  labels:
+    advertise: bgp
+  name: pfsense-service-vips
+spec:
+  advertisements:
+  - advertisementType: Service
+    selector:
+      matchLabels:
+        bgp-advertise: 'true'
+    service:
+      addresses:
+      - LoadBalancerIP

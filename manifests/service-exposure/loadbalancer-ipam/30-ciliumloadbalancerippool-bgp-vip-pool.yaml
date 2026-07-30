@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: bgp-vip-pool
+spec:
+  blocks:
+  - start: 10.30.0.100
+    stop: 10.30.0.100
+  disabled: false
+  serviceSelector:
+    matchLabels:
+      lb-ipam: bgp
