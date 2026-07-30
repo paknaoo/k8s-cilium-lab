@@ -1,0 +1,6 @@
+NAME                                   HOLDER                                                                      ACQUIRE                       RENEW
+apiserver-b2skeeyu3yumdvmtujjcrxk7ey   apiserver-b2skeeyu3yumdvmtujjcrxk7ey_e27343eb-d870-40da-9ffe-2e2e691df069   <none>                        2026-07-29T21:32:52.163444Z
+cilium-l2announce-lb-ipam-demo-web     k8s-worker1                                                                 2026-07-29T20:58:43.768839Z   2026-07-29T21:32:53.603354Z
+cilium-operator-resource-lock          k8s-worker2-t7qfzqqjfv                                                      2026-07-29T21:05:37.508932Z   2026-07-29T21:32:53.820760Z
+kube-controller-manager                k8s-master_649442ac-127b-4640-8d65-53c44d6d59b4                             2026-07-29T20:58:42.444861Z   2026-07-29T21:32:53.512648Z
+kube-scheduler                         k8s-master_af758d0f-a896-4a90-92ae-f6184e451902                             2026-07-29T20:58:41.399948Z   2026-07-29T21:32:55.276318Z

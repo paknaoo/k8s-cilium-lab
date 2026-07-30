@@ -1,0 +1,89 @@
+apiVersion: v1
+items:
+- apiVersion: cilium.io/v2
+  kind: CiliumBGPNodeConfig
+  metadata:
+    creationTimestamp: "2026-07-28T23:19:57Z"
+    generation: 1
+    name: k8s-worker1
+    ownerReferences:
+    - apiVersion: cilium.io/v2
+      controller: true
+      kind: CiliumBGPClusterConfig
+      name: pfsense-bgp
+      uid: 09289055-17b8-4082-a9d9-643544bf7cee
+    resourceVersion: "194829"
+    uid: 11fb60fc-3be2-4368-b37f-134abde03177
+  spec:
+    bgpInstances:
+    - localASN: 64513
+      name: pfsense
+      peers:
+      - name: pfsense-lan
+        peerASN: 64512
+        peerAddress: 10.10.10.254
+        peerConfigRef:
+          name: pfsense-peer
+  status:
+    bgpInstances:
+    - localASN: 64513
+      name: pfsense
+      peers:
+      - establishedTime: "2026-07-29T21:03:01Z"
+        name: pfsense-lan
+        peerASN: 64512
+        peerAddress: 10.10.10.254
+        peeringState: established
+        routeCount:
+        - advertised: 1
+          afi: ipv4
+          received: 0
+          safi: unicast
+        timers:
+          appliedHoldTimeSeconds: 9
+          appliedKeepaliveSeconds: 3
+- apiVersion: cilium.io/v2
+  kind: CiliumBGPNodeConfig
+  metadata:
+    creationTimestamp: "2026-07-28T22:57:29Z"
+    generation: 1
+    name: k8s-worker2
+    ownerReferences:
+    - apiVersion: cilium.io/v2
+      controller: true
+      kind: CiliumBGPClusterConfig
+      name: pfsense-bgp
+      uid: 09289055-17b8-4082-a9d9-643544bf7cee
+    resourceVersion: "195378"
+    uid: 5c888563-9733-4438-a525-39463c5c3eb4
+  spec:
+    bgpInstances:
+    - localASN: 64513
+      name: pfsense
+      peers:
+      - name: pfsense-lan
+        peerASN: 64512
+        peerAddress: 10.10.10.254
+        peerConfigRef:
+          name: pfsense-peer
+  status:
+    bgpInstances:
+    - localASN: 64513
+      name: pfsense
+      peers:
+      - establishedTime: "2026-07-29T21:05:45Z"
+        name: pfsense-lan
+        peerASN: 64512
+        peerAddress: 10.10.10.254
+        peeringState: established
+        routeCount:
+        - advertised: 1
+          afi: ipv4
+          received: 0
+          safi: unicast
+        timers:
+          appliedHoldTimeSeconds: 9
+          appliedKeepaliveSeconds: 3
+kind: List
+metadata:
+  resourceVersion: ""

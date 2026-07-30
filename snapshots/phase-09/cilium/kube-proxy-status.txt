@@ -1,0 +1,2 @@
+NAME         DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR                          AGE   CONTAINERS   IMAGES                               SELECTOR
+kube-proxy   0         0         0       0            0           kubernetes.io/os=kube-proxy-disabled   52d   kube-proxy   registry.k8s.io/kube-proxy:v1.36.1   k8s-app=kube-proxy

@@ -1,0 +1,58 @@
+apiVersion: v1
+items:
+- addressType: IPv4
+  apiVersion: discovery.k8s.io/v1
+  endpoints:
+  - addresses:
+    - 10.244.1.89
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+    nodeName: k8s-worker1
+    targetRef:
+      kind: Pod
+      name: web-84df6fdf59-sbdkh
+      namespace: lb-ipam-demo
+      uid: bc57841b-3a26-47c9-9b89-899abcd70903
+  - addresses:
+    - 10.244.1.222
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+    nodeName: k8s-worker1
+    targetRef:
+      kind: Pod
+      name: web-84df6fdf59-lchxr
+      namespace: lb-ipam-demo
+      uid: d422bae5-df4e-4eba-b7f5-9205eecba43d
+  kind: EndpointSlice
+  metadata:
+    annotations:
+      endpoints.kubernetes.io/last-change-trigger-time: "2026-07-29T21:02:58Z"
+    creationTimestamp: "2026-07-27T11:05:31Z"
+    generateName: web-
+    generation: 22
+    labels:
+      endpointslice.kubernetes.io/managed-by: endpointslice-controller.k8s.io
+      kubernetes.io/service-name: web
+      lb-ipam: lan
+    name: web-4zqfr
+    namespace: lb-ipam-demo
+    ownerReferences:
+    - apiVersion: v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Service
+      name: web
+      uid: c1a531ef-512e-4850-aaef-afcd747c8380
+    resourceVersion: "194793"
+    uid: b69c3a75-30d2-4fde-b16a-3a25d2e170e7
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+kind: List
+metadata:
+  resourceVersion: ""

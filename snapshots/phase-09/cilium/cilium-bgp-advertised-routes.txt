@@ -1,0 +1,3 @@
+Node          VRouter   Peer           Prefix           NextHop       Age      Attrs
+k8s-worker1   64513     10.10.10.254   10.30.0.100/32   10.10.10.21   40m42s   [{Origin: i} {AsPath: 64513} {Nexthop: 10.10.10.21}]   
+k8s-worker2   64513     10.10.10.254   10.30.0.100/32   10.10.10.22   33m41s   [{Origin: i} {AsPath: 64513} {Nexthop: 10.10.10.22}]   

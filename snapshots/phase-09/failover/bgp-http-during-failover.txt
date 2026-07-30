@@ -1,0 +1,1 @@
+BGP VIP during failover: HTTP 200

@@ -1,0 +1,103 @@
+============================================================
+Phase 9 — Service Exposure Validation
+============================================================
+Repository: /home/adam/k8s-cilium-lab
+SSH target: master
+
+PASS: Local command available: ssh
+PASS: Local command available: curl
+PASS: Local command available: grep
+PASS: Local command available: find
+
+--- Cluster access ---
+PASS: Kubernetes API is reachable through master
+PASS: Cilium CLI reports cluster status
+
+--- Kube-proxy replacement ---
+PASS: Cilium kube-proxy replacement is enabled
+WARN: Cilium kube-proxy replacement is enabled, but the kube-proxy DaemonSet remains present (0     0)
+
+--- Declarative Cilium resources ---
+PASS: Resource exists: ciliumloadbalancerippool/k8s-lan-pool
+PASS: Resource exists: ciliumloadbalancerippool/bgp-vip-pool
+PASS: Resource exists: ciliuml2announcementpolicy/lan-loadbalancer-services
+PASS: Resource exists: ciliumbgppeerconfig/pfsense-peer
+PASS: Resource exists: ciliumbgpadvertisement/pfsense-service-vips
+PASS: Resource exists: ciliumbgpclusterconfig/pfsense-bgp
+
+--- Workload and LoadBalancer Services ---
+PASS: Deployment lb-ipam-demo/web is ready
+PASS: Service lb-ipam-demo/web uses VIP 10.10.10.200
+PASS: Service lb-ipam-demo/web-bgp uses VIP 10.30.0.100
+PASS: Service lb-ipam-demo/web has ready endpoints
+PASS: Service lb-ipam-demo/web-bgp has ready endpoints
+
+--- L2 Announcement Lease ---
+PASS: L2 announcement Lease found: cilium-l2announce-lb-ipam-demo-web
+PASS: L2 announcement Lease holder is k8s-worker2
+
+--- Cilium BGP sessions ---
+PASS: BGP state includes k8s-worker1
+PASS: BGP state includes k8s-worker2
+PASS: BGP peer ASN 64512 is present
+PASS: Cilium local ASN 64513 is present
+PASS: At least two BGP sessions are established
+
+--- Current HTTP validation ---
+PASS: L2 VIP 10.10.10.200 returned HTTP 200
+PASS: BGP VIP 10.30.0.100 returned HTTP 200
+
+--- Recorded L2 failover evidence ---
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/l2-lease-before-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/l2-lease-after-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/l2-http-before-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/l2-http-after-failover.txt
+PASS: Recorded L2 holder before failover was k8s-worker1
+PASS: Recorded L2 holder after failover was k8s-worker2
+PASS: L2 VIP returned HTTP 200 before failover
+PASS: L2 VIP returned HTTP 200 after failover
+
+--- Recorded BGP failover evidence ---
+PASS: Evidence file is present and non-empty: snapshots/phase-09/bgp/bgp-vip-route-before-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/bgp/bgp-vip-route-during-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/bgp/bgp-vip-route-after-recovery.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/bgp-http-before-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/bgp-http-during-failover.txt
+PASS: Evidence file is present and non-empty: snapshots/phase-09/failover/bgp-http-after-recovery.txt
+PASS: BGP VIP route existed before failover
+PASS: Pre-failover BGP evidence includes worker1
+PASS: Pre-failover BGP evidence includes worker2
+PASS: BGP route through worker2 remained during failover
+PASS: Recovered BGP evidence includes worker1
+PASS: Recovered BGP evidence includes worker2
+PASS: BGP VIP returned HTTP 200 before failover
+PASS: BGP VIP returned HTTP 200 during failover
+PASS: BGP VIP returned HTTP 200 after recovery
+
+--- Manifest API validation ---
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/bgp-control-plane/50-ciliumbgppeerconfig-pfsense-peer.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/bgp-control-plane/60-ciliumbgpadvertisement-pfsense-service-vips.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/bgp-control-plane/70-ciliumbgpclusterconfig-pfsense-bgp.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2alpha1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/l2-announcements/40-ciliuml2announcementpolicy-lan-loadbalancer-services.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/loadbalancer-ipam/30-ciliumloadbalancerippool-bgp-vip-pool.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/loadbalancer-ipam/30-ciliumloadbalancerippool-k8s-lan-pool.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/services/00-namespace-lb-ipam-demo.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using apps/v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/services/10-deployment-web.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/services/20-service-web-bgp.yaml
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+PASS: Server-side dry-run passed: manifests/service-exposure/services/20-service-web.yaml
+
+============================================================
+Failures: 0
+Warnings: 1
+============================================================
+Phase 9 service exposure validation completed successfully.

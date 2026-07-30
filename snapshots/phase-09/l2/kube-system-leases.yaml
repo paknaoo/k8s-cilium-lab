@@ -1,0 +1,78 @@
+apiVersion: v1
+items:
+- apiVersion: coordination.k8s.io/v1
+  kind: Lease
+  metadata:
+    annotations:
+      kubernetes.io/peer-advertise-address: 10.10.10.20:6443
+    creationTimestamp: "2026-07-29T20:58:24Z"
+    labels:
+      apiserver.kubernetes.io/identity: kube-apiserver
+      kubernetes.io/hostname: k8s-master
+    name: apiserver-b2skeeyu3yumdvmtujjcrxk7ey
+    namespace: kube-system
+    resourceVersion: "199689"
+    uid: dd2837cd-bf93-4bd5-a5d9-dc25b9e496f6
+  spec:
+    holderIdentity: apiserver-b2skeeyu3yumdvmtujjcrxk7ey_e27343eb-d870-40da-9ffe-2e2e691df069
+    leaseDurationSeconds: 3600
+    renewTime: "2026-07-29T21:33:12.667017Z"
+- apiVersion: coordination.k8s.io/v1
+  kind: Lease
+  metadata:
+    creationTimestamp: "2026-07-29T20:58:43Z"
+    name: cilium-l2announce-lb-ipam-demo-web
+    namespace: kube-system
+    resourceVersion: "199686"
+    uid: 597a261b-3a40-4531-b2d2-b99966a59b2c
+  spec:
+    acquireTime: "2026-07-29T20:58:43.768839Z"
+    holderIdentity: k8s-worker1
+    leaseDurationSeconds: 15
+    leaseTransitions: 0
+    renewTime: "2026-07-29T21:33:11.654130Z"
+- apiVersion: coordination.k8s.io/v1
+  kind: Lease
+  metadata:
+    creationTimestamp: "2026-06-07T22:15:09Z"
+    name: cilium-operator-resource-lock
+    namespace: kube-system
+    resourceVersion: "199687"
+    uid: 913277af-eebb-44e1-8e39-fd9221086f2d
+  spec:
+    acquireTime: "2026-07-29T21:05:37.508932Z"
+    holderIdentity: k8s-worker2-t7qfzqqjfv
+    leaseDurationSeconds: 15
+    leaseTransitions: 15
+    renewTime: "2026-07-29T21:33:11.873480Z"
+- apiVersion: coordination.k8s.io/v1
+  kind: Lease
+  metadata:
+    creationTimestamp: "2026-06-07T21:05:29Z"
+    name: kube-controller-manager
+    namespace: kube-system
+    resourceVersion: "199685"
+    uid: 7a71beeb-c290-4f95-8a02-3ea0c4a29021
+  spec:
+    acquireTime: "2026-07-29T20:58:42.444861Z"
+    holderIdentity: k8s-master_649442ac-127b-4640-8d65-53c44d6d59b4
+    leaseDurationSeconds: 15
+    leaseTransitions: 13
+    renewTime: "2026-07-29T21:33:11.568573Z"
+- apiVersion: coordination.k8s.io/v1
+  kind: Lease
+  metadata:
+    creationTimestamp: "2026-06-07T21:05:29Z"
+    name: kube-scheduler
+    namespace: kube-system
+    resourceVersion: "199684"
+    uid: c1bcaad8-9f05-49a9-94bd-e8d3c643f4ad
+  spec:
+    acquireTime: "2026-07-29T20:58:41.399948Z"
+    holderIdentity: k8s-master_af758d0f-a896-4a90-92ae-f6184e451902
+    leaseDurationSeconds: 15
+    leaseTransitions: 13
+    renewTime: "2026-07-29T21:33:11.330245Z"
+kind: List
+metadata:
+  resourceVersion: ""

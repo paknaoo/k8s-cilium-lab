@@ -1,0 +1,5 @@
+Routing entry for 10.30.0.100/32
+  Known via "bgp", distance 20, metric 0, best
+  Last update 00:03:31 ago
+  * 10.10.10.22, via em2, weight 1
+

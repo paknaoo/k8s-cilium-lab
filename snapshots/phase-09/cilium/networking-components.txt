@@ -1,0 +1,9 @@
+cilium-8nkf9                         1/1     Running   2 (5m5s ago)   23h     10.10.10.22    k8s-worker2   <none>           <none>
+cilium-envoy-24kks                   1/1     Running   5 (5m5s ago)   2d9h    10.10.10.22    k8s-worker2   <none>           <none>
+cilium-envoy-2sqsc                   1/1     Running   3 (12m ago)    2d9h    10.10.10.20    k8s-master    <none>           <none>
+cilium-envoy-jln4v                   1/1     Running   3 (12m ago)    2d9h    10.10.10.21    k8s-worker1   <none>           <none>
+cilium-operator-6b7584c848-wrv8t     1/1     Running   2 (5m5s ago)   23h     10.10.10.22    k8s-worker2   <none>           <none>
+cilium-sw5lc                         1/1     Running   1 (12m ago)    23h     10.10.10.21    k8s-worker1   <none>           <none>
+cilium-twtfn                         1/1     Running   1 (12m ago)    23h     10.10.10.20    k8s-master    <none>           <none>
+hubble-relay-599d47597b-5x9kt        1/1     Running   2 (12m ago)    2d      10.244.1.241   k8s-worker1   <none>           <none>
+hubble-ui-6b4f8fcff9-r89p8           2/2     Running   16 (12m ago)   16d     10.244.1.231   k8s-worker1   <none>           <none>

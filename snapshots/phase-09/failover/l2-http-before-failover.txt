@@ -1,0 +1,1 @@
+L2 VIP before failover: HTTP 200

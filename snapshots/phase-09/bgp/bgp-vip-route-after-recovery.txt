@@ -1,0 +1,11 @@
+BGP routing table entry for 10.30.0.100/32, version 8
+Paths: (2 available, best #2, table default)
+  Not advertised to any peer
+  64513
+    10.10.10.21 (metric 1) from 10.10.10.21 (10.10.10.21)
+      Origin IGP, valid, external, multipath
+      Last update: Wed Jul 29 22:28:28 2026
+  64513
+    10.10.10.22 (metric 1) from 10.10.10.22 (10.10.10.22)
+      Origin IGP, valid, external, multipath, best (Older Path)
+      Last update: Wed Jul 29 21:05:46 2026

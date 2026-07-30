@@ -1,0 +1,40 @@
+
+Validating: manifests/service-exposure/bgp-control-plane/50-ciliumbgppeerconfig-pfsense-peer.yaml
+ciliumbgppeerconfig.cilium.io/pfsense-peer serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/bgp-control-plane/60-ciliumbgpadvertisement-pfsense-service-vips.yaml
+ciliumbgpadvertisement.cilium.io/pfsense-service-vips serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/bgp-control-plane/70-ciliumbgpclusterconfig-pfsense-bgp.yaml
+ciliumbgpclusterconfig.cilium.io/pfsense-bgp serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/l2-announcements/40-ciliuml2announcementpolicy-lan-loadbalancer-services.yaml
+ciliuml2announcementpolicy.cilium.io/lan-loadbalancer-services serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2alpha1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/loadbalancer-ipam/30-ciliumloadbalancerippool-bgp-vip-pool.yaml
+ciliumloadbalancerippool.cilium.io/bgp-vip-pool serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/loadbalancer-ipam/30-ciliumloadbalancerippool-k8s-lan-pool.yaml
+ciliumloadbalancerippool.cilium.io/k8s-lan-pool serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using cilium.io/v2: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/services/00-namespace-lb-ipam-demo.yaml
+namespace/lb-ipam-demo serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/services/10-deployment-web.yaml
+deployment.apps/web serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using apps/v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/services/20-service-web-bgp.yaml
+service/web-bgp serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+
+Validating: manifests/service-exposure/services/20-service-web.yaml
+service/web serverside-applied (server dry run)
+Warning: failed to migrate kubectl.kubernetes.io/last-applied-configuration for Server-Side Apply. This is non-fatal and will be retried next time you apply. Error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
