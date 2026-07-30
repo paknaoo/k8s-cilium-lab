@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the current architecture of the `k8s-cilium-lab` environment. It covers the implemented virtual networks, pfSense routing, WireGuard management path, Kubernetes networking, Cilium policy model and Hubble observability.
+This document describes the current architecture of the `k8s-cilium-lab` environment. It covers the implemented virtual networks, pfSense routing, WireGuard management path, Kubernetes networking, Cilium policy model, LoadBalancer service exposure and Hubble observability.
 
 Only components that have been implemented and practically validated are presented as part of the current architecture.
 
@@ -8,9 +8,9 @@ Only components that have been implemented and practically validated are present
 
 ## Overview
 
-The lab is built on VMware Workstation and uses pfSense as the routing and firewall boundary between the management network, the Kubernetes LAN and the upstream VMware NAT network.
+The lab is built on VMware Workstation and uses pfSense as the routing, firewall and FRR boundary between the management network, the Kubernetes LAN and the upstream VMware NAT network.
 
-Administration is performed from a dedicated management VM. Kubernetes nodes are placed on a separate LAN behind pfSense, with Cilium providing pod networking and network policy enforcement.
+Administration is performed from a dedicated management VM. Kubernetes nodes are placed on a separate LAN behind pfSense, with Cilium providing pod networking, policy enforcement, kube-proxy replacement and LoadBalancer service exposure.
 
 ```mermaid
 flowchart TD
@@ -27,21 +27,27 @@ flowchart TD
     end
 
     subgraph FIREWALL["pfSense"]
-        PFSENSE["WAN: DHCP<br/>OUTSIDE: 192.168.50.254<br/>LAN: 10.10.10.254<br/>WG: 10.20.20.254"]
+        PFSENSE["WAN: DHCP<br/>OUTSIDE: 192.168.50.254<br/>LAN: 10.10.10.254<br/>WG: 10.20.20.254<br/>FRR ASN: 64512"]
     end
 
     subgraph LAN["VMnet10 — Kubernetes LAN<br/>10.10.10.0/24"]
         MASTER["k8s-master<br/>10.10.10.20"]
-        WORKER1["k8s-worker1<br/>10.10.10.21"]
-        WORKER2["k8s-worker2<br/>10.10.10.22"]
+        WORKER1["k8s-worker1<br/>10.10.10.21<br/>BGP ASN 64513"]
+        WORKER2["k8s-worker2<br/>10.10.10.22<br/>BGP ASN 64513"]
+        L2VIP["L2 VIP<br/>10.10.10.200"]
     end
 
-    subgraph K8S["Kubernetes Networking"]
+    subgraph K8S["Kubernetes Networking and Service Exposure"]
         CILIUM[Cilium CNI]
-        KPROXY[kube-proxy]
+        KPR["kube-proxy replacement<br/>enabled"]
+        LEGACY["legacy kube-proxy<br/>DaemonSet present"]
         COREDNS[CoreDNS]
         HUBBLE[Hubble]
         POLICIES["Kubernetes and Cilium Policies"]
+        LBIPAM[LoadBalancer IPAM]
+        L2ANN[L2 Announcements]
+        BGP["BGP Control Plane v2"]
+        BGPVIP["BGP VIP<br/>10.30.0.100/32"]
         WORKLOADS[Workloads and Services]
     end
 
@@ -65,15 +71,26 @@ flowchart TD
     WORKER1 --> CILIUM
     WORKER2 --> CILIUM
 
+    CILIUM --> KPR
     CILIUM --> HUBBLE
     CILIUM --> POLICIES
     CILIUM --> COREDNS
+    CILIUM --> LBIPAM
     CILIUM --> WORKLOADS
 
-    KPROXY --> WORKLOADS
+    LBIPAM --> L2VIP
+    LBIPAM --> BGPVIP
+    L2ANN --> L2VIP
+    BGP --> BGPVIP
+
+    WORKER1 <-->|BGP| PFSENSE
+    WORKER2 <-->|BGP| PFSENSE
+
+    L2VIP --> WORKLOADS
+    BGPVIP --> WORKLOADS
 ```
 
----
+The legacy `kube-proxy` DaemonSet object remains present. Automated validation reports this condition explicitly while confirming that Cilium kube-proxy replacement is enabled.
 
 ## VMware Networks
 
@@ -124,11 +141,13 @@ Daily administration is performed from the `mgmt` VM.
 
 ## IP Plan
 
-| Network           | Purpose                    | Gateway          |
-| ----------------- | -------------------------- | ---------------- |
-| `192.168.50.0/24` | OUTSIDE management network | `192.168.50.254` |
-| `10.10.10.0/24`   | Kubernetes node LAN        | `10.10.10.254`   |
-| `10.20.20.0/24`   | WireGuard management VPN   | `10.20.20.254`   |
+| Address or network | Purpose | Routing or ownership |
+|---|---|---|
+| `192.168.50.0/24` | OUTSIDE management network | pfSense gateway `192.168.50.254` |
+| `10.10.10.0/24` | Kubernetes node LAN | pfSense gateway `10.10.10.254` |
+| `10.20.20.0/24` | WireGuard management VPN | pfSense gateway `10.20.20.254` |
+| `10.10.10.200` | L2-announced LoadBalancer Service VIP | Cilium LB IPAM and L2 Announcements |
+| `10.30.0.100/32` | BGP-advertised LoadBalancer Service VIP | Cilium BGP Control Plane v2 and pfSense FRR |
 
 Kubernetes node addressing is static.
 
@@ -144,8 +163,6 @@ Ubuntu systems use:
 as their configured external DNS resolvers.
 
 Inside Kubernetes, CoreDNS provides workload and Service name resolution.
-
----
 
 ## Infrastructure Traffic Model
 
@@ -167,18 +184,39 @@ Kubernetes LAN
 Kubernetes nodes and workloads
 ```
 
+The validated LoadBalancer exposure paths are:
+
+```text
+L2:
+mgmt or LAN client
+  → 10.10.10.200
+  → current Cilium L2 Lease holder
+  → web Service backend
+```
+
+```text
+BGP:
+mgmt
+  → pfSense FRR
+  → 10.30.0.100/32
+  → k8s-worker1 or k8s-worker2
+  → web Service backend
+```
+
 Key design points:
 
 * The `mgmt` VM is the administrative entry point.
 * pfSense controls routed traffic between internal lab networks.
+* pfSense FRR peers with both Kubernetes worker nodes.
 * Kubernetes nodes use pfSense as their default gateway.
 * Node-to-node communication occurs on the Kubernetes LAN.
-* Cilium provides pod networking and policy enforcement.
+* Cilium provides pod networking, policy enforcement and kube-proxy replacement.
+* Cilium LoadBalancer IPAM allocates the validated Service VIPs.
+* Cilium L2 Announcements provide LAN ownership for `10.10.10.200`.
+* Cilium BGP Control Plane v2 advertises `10.30.0.100/32` to pfSense.
 * CoreDNS provides Kubernetes Service discovery.
 * Hubble provides flow and policy visibility.
-* `kube-proxy` remains responsible for Kubernetes Service proxying.
-
----
+* The legacy `kube-proxy` DaemonSet object remains present and is reported as a validation warning.
 
 ## Firewall Policy Summary
 
@@ -259,31 +297,38 @@ The WireGuard implementation is currently IPv4 only.
 
 The cluster was bootstrapped with `kubeadm` and consists of one control plane node and two worker nodes.
 
-| Component          | Current State                                                            |
-| ------------------ | ------------------------------------------------------------------------ |
-| Control plane      | Running on `k8s-master`                                                  |
-| Worker nodes       | `k8s-worker1`, `k8s-worker2`                                             |
-| Kubernetes version | `v1.36.1`                                                                |
-| Container runtime  | `containerd`                                                             |
-| CNI                | Cilium                                                                   |
-| IPAM               | Kubernetes IPAM                                                          |
-| Service proxy      | `kube-proxy`                                                             |
-| Cluster DNS        | CoreDNS                                                                  |
-| Observability      | Hubble Relay, UI and CLI                                                 |
-| Policy resources   | `NetworkPolicy`, `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy` |
+| Component | Current State |
+|---|---|
+| Control plane | Running on `k8s-master` |
+| Worker nodes | `k8s-worker1`, `k8s-worker2` |
+| Kubernetes version | `v1.36.1` |
+| Container runtime | `containerd` |
+| CNI | Cilium |
+| Pod IPAM | Kubernetes IPAM |
+| Service proxy | Cilium kube-proxy replacement enabled |
+| Legacy kube-proxy DaemonSet | Present |
+| LoadBalancer IPAM | Enabled |
+| L2 Announcements | Enabled |
+| BGP Control Plane | v2, peering with pfSense FRR |
+| Cluster DNS | CoreDNS |
+| Observability | Hubble Relay, UI and CLI |
+| Policy resources | `NetworkPolicy`, `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy` |
 
-Cilium was installed with:
+The current validated Cilium state includes:
 
 ```text
 ipam.mode=kubernetes
-kubeProxyReplacement=false
+kube-proxy-replacement=true
 ```
 
-Full kube-proxy replacement is not enabled.
+The legacy `kube-proxy` DaemonSet object remains present. The repository does not claim that it has been removed.
 
-The `kube-proxy` DaemonSet remains deployed.
+The two LoadBalancer Services validated in Phase 9 use:
 
----
+```text
+10.10.10.200
+10.30.0.100
+```
 
 ## Kubernetes Networking Model
 
@@ -291,6 +336,10 @@ Cilium provides:
 
 * pod-to-pod networking;
 * pod-to-Service connectivity;
+* Cilium kube-proxy replacement;
+* LoadBalancer IP address allocation;
+* L2 Service advertisement;
+* BGP Service advertisement;
 * namespace-aware policy enforcement;
 * DNS-aware egress filtering;
 * FQDN-based access control;
@@ -314,7 +363,13 @@ Hubble provides evidence of:
 * policy decisions;
 * cross-node `to-overlay` routing.
 
----
+Cilium and pfSense FRR operational state provide additional evidence for:
+
+* LoadBalancer VIP allocation;
+* L2 Lease ownership;
+* established BGP sessions;
+* advertised Service routes;
+* route withdrawal and recovery.
 
 ## Advanced Policy Architecture
 
@@ -594,6 +649,157 @@ Current policy diagnosis must therefore consider:
 
 ---
 
+## Service Exposure Architecture
+
+Phase 09 exposes Kubernetes Services through two complementary Cilium mechanisms:
+
+* L2 Announcements for a Service VIP located directly on the Kubernetes LAN;
+* BGP Control Plane v2 for a routed Service VIP advertised to pfSense FRR.
+
+Cilium LoadBalancer IPAM allocates addresses from two dedicated pools.
+
+| Pool | Purpose |
+|---|---|
+| `k8s-lan-pool` | LAN-reachable LoadBalancer addresses |
+| `bgp-vip-pool` | Service addresses advertised through BGP |
+
+The validated Services are:
+
+| Service | Exposure | VIP |
+|---|---|---|
+| `lb-ipam-demo/web` | Cilium L2 Announcement | `10.10.10.200` |
+| `lb-ipam-demo/web-bgp` | Cilium BGP Control Plane v2 | `10.30.0.100/32` |
+
+Both Services select the same validated web Deployment.
+
+```mermaid
+flowchart LR
+
+    MGMT[mgmt]
+    PFSENSE["pfSense FRR<br/>ASN 64512"]
+
+    subgraph K8S["Kubernetes Cluster"]
+        W1["k8s-worker1<br/>10.10.10.21<br/>ASN 64513"]
+        W2["k8s-worker2<br/>10.10.10.22<br/>ASN 64513"]
+        L2VIP["L2 VIP<br/>10.10.10.200"]
+        BGPVIP["BGP VIP<br/>10.30.0.100/32"]
+        WEB[web workload]
+    end
+
+    MGMT -->|LAN access| L2VIP
+    L2VIP -->|current Lease holder| W2
+    L2VIP -.->|validated failover path| W1
+
+    MGMT --> PFSENSE
+    PFSENSE <-->|BGP session| W1
+    PFSENSE <-->|BGP session| W2
+    PFSENSE -->|two normal paths| BGPVIP
+
+    W1 --> WEB
+    W2 --> WEB
+    BGPVIP --> WEB
+```
+
+### LoadBalancer IPAM
+
+Two `CiliumLoadBalancerIPPool` objects provide the validated addresses:
+
+```text
+k8s-lan-pool
+bgp-vip-pool
+```
+
+The LAN pool assigned `10.10.10.200` to `lb-ipam-demo/web`.
+
+The BGP pool assigned `10.30.0.100` to `lb-ipam-demo/web-bgp`.
+
+Both Services had ready EndpointSlice backends and returned HTTP 200 during validation.
+
+### L2 Announcement and Lease Ownership
+
+The L2 Service is controlled by:
+
+```text
+CiliumL2AnnouncementPolicy/lan-loadbalancer-services
+```
+
+Cilium maintains:
+
+```text
+cilium-l2announce-lb-ipam-demo-web
+```
+
+as the Lease for the L2-announced Service.
+
+The controlled failover changed the holder from:
+
+```text
+k8s-worker1
+```
+
+to:
+
+```text
+k8s-worker2
+```
+
+The client-facing VIP remained `10.10.10.200` and returned HTTP 200 before and after the ownership change.
+
+The original policy selector was restored and temporary labels were removed after validation.
+
+### BGP Control Plane v2
+
+The declarative BGP resources are:
+
+```text
+CiliumBGPClusterConfig/pfsense-bgp
+CiliumBGPPeerConfig/pfsense-peer
+CiliumBGPAdvertisement/pfsense-service-vips
+```
+
+Cilium generated runtime node configurations for:
+
+```text
+CiliumBGPNodeConfig/k8s-worker1
+CiliumBGPNodeConfig/k8s-worker2
+```
+
+No `CiliumBGPNodeConfigOverride` objects are configured.
+
+The validated Autonomous System assignments are:
+
+| System | ASN |
+|---|---:|
+| pfSense FRR | `64512` |
+| Cilium worker nodes | `64513` |
+
+During normal operation, pfSense receives two paths to:
+
+```text
+10.30.0.100/32
+```
+
+through:
+
+```text
+10.10.10.21
+10.10.10.22
+```
+
+During the controlled failover, the path through `10.10.10.21` was withdrawn while the path through `10.10.10.22` remained available.
+
+After recovery, both paths returned. The Service responded with HTTP 200 before, during and after failover.
+
+### Kube-Proxy State
+
+Cilium reports kube-proxy replacement as enabled.
+
+The legacy Kubernetes `kube-proxy` DaemonSet object remains present. Automated validation reports this as a warning so that the repository accurately represents both parts of the current state.
+
+The architecture does not claim that the legacy DaemonSet has been removed.
+
+---
+
 ## Observability Model
 
 Hubble Relay aggregates flow data from Cilium agents across the cluster.
@@ -641,8 +847,9 @@ Infrastructure and cluster:
 * Kubernetes nodes can reach the internet through pfSense.
 * All Kubernetes nodes report `Ready`.
 * Cilium reports a healthy status.
+* Cilium kube-proxy replacement reports enabled.
+* The legacy `kube-proxy` DaemonSet remains present and is reported explicitly.
 * CoreDNS is running.
-* `kube-proxy` remains deployed.
 * Workload, Service and DNS connectivity is operational.
 
 Observability:
@@ -674,36 +881,45 @@ WireGuard:
 * Automatic Outbound NAT was confirmed for `10.20.20.0/24`.
 * DNS resolution remains operational.
 
+Service exposure:
+
+* `k8s-lan-pool` and `bgp-vip-pool` are active without address conflicts.
+* `lb-ipam-demo/web` uses the VIP `10.10.10.200`.
+* `lb-ipam-demo/web-bgp` uses the VIP `10.30.0.100`.
+* Both Services had ready backends.
+* L2 Lease ownership moved from `k8s-worker1` to `k8s-worker2`.
+* The L2 VIP returned HTTP 200 before and after failover.
+* Both worker nodes established BGP sessions with pfSense FRR.
+* pfSense received two paths to `10.30.0.100/32` before failover.
+* The path through `10.10.10.22` remained during controlled failover.
+* Both BGP paths returned after recovery.
+* The BGP VIP returned HTTP 200 before, during and after failover.
+* The original selectors were restored and temporary labels were removed.
+* Automated Phase 9 validation completed with zero failures and one warning for the remaining legacy `kube-proxy` DaemonSet.
+
 Repository artefacts:
 
 * Live resources were exported and cleaned.
 * Generated manifests passed server-side dry-run.
 * Validation scripts completed successfully.
-* Hubble scenario evidence was captured.
+* Hubble and service-exposure evidence was captured.
 * Repository artefacts were scanned for sensitive information.
-
----
 
 ## Current Scope
 
-This document describes the architecture implemented through Phase 08.
+This document describes the architecture implemented and validated through Phase 09.
 
 The remaining repository phases are:
 
-1. **Phase 09 — Service Exposure**
-
-   * Cilium LoadBalancer IPAM.
-   * L2 Announcements.
-   * BGP integration with pfSense.
-2. **Phase 10 — Failure Scenarios and Troubleshooting**
+1. **Phase 10 — Failure Scenarios and Troubleshooting**
 
    * Controlled failures.
    * Diagnosis and recovery evidence.
-3. **Phase 11 — Automation and Portfolio Polish**
+2. **Phase 11 — Automation and Portfolio Polish**
 
    * Validation automation.
    * Makefile targets.
    * Repository consistency checks.
    * Final portfolio presentation.
 
-These capabilities are not presented as part of the current implemented architecture until they have been deployed and practically validated.
+Broader GitOps, application delivery, observability and security work is intentionally handled in separate repositories.

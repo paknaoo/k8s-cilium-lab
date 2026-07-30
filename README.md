@@ -104,6 +104,8 @@ The following technologies are currently used throughout the project.
 | Management VPN              | WireGuard                                                                              |
 | Remote Administration       | OpenSSH                                                                                |
 | Source Control              | Git and GitHub                                                                         |
+| Service Exposure            | Cilium LB IPAM, L2 Announcements and BGP Control Plane v2 |
+| Dynamic Routing             | pfSense FRR                                              |
 
 ---
 
@@ -118,25 +120,26 @@ The following components have been successfully deployed and validated.
 * Three-node Kubernetes cluster deployed using `kubeadm`.
 * One control plane node and two worker nodes running successfully.
 * `containerd` configured as the container runtime.
-* Cilium installed and operational with Kubernetes IPAM.
-* `kube-proxy` retained with `kubeProxyReplacement=false`.
-* CoreDNS running successfully.
-* Hubble Relay, UI and CLI enabled and operational.
-* Basic workload, Service and DNS networking validated.
-* Kubernetes default-deny ingress and egress policies validated.
-* Cilium namespace-aware ingress policies validated.
-* DNS-aware and FQDN-based egress policies validated.
-* Layer 7 HTTP method and path filtering validated.
-* `CiliumClusterwideNetworkPolicy` validated across multiple namespaces.
-* Explicit `ingressDeny` precedence over allow policies validated.
-* Cross-node overlay traffic observed with Hubble.
-* Live cluster manifests, status snapshots and validation scripts captured as repository artefacts.
+* Cilium installed and operational.
+* Cilium kube-proxy replacement enabled.
+* The legacy `kube-proxy` DaemonSet object remains present and is reported by validation as a warning.
+* Hubble Relay and Hubble UI enabled and operational.
+* Kubernetes NetworkPolicy, CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy behaviour validated.
+* Cross-namespace, DNS-aware, FQDN, Layer 7, cluster-wide and explicit-deny policies validated.
+* Cilium LoadBalancer IPAM configured with dedicated LAN and BGP VIP pools.
+* Cilium L2 Announcements configured for the LAN Service VIP `10.10.10.200`.
+* Lease-based L2 ownership failover validated between both worker nodes.
+* Cilium BGP Control Plane v2 integrated with pfSense FRR.
+* BGP peering validated between pfSense ASN `64512` and Cilium ASN `64513`.
+* The Service VIP `10.30.0.100/32` is advertised through both worker nodes.
+* Controlled BGP path withdrawal and recovery completed without HTTP interruption.
+* Repository manifests, runtime snapshots and validation scripts derived from the working lab.
 
 ---
 
 ## Documentation
 
-Implementation phases:
+Implementation details are organised by completed project phase:
 
 1. [Phase 01 — Networking Foundation](docs/phase-01-networking.md)
 2. [Phase 02 — Kubernetes Bootstrap](docs/phase-02-kubernetes-bootstrap.md)
@@ -146,90 +149,53 @@ Implementation phases:
 6. [Phase 06 — WireGuard Full-Tunnel VPN](docs/phase-06-wireguard.md)
 7. [Phase 07 — Repository Artefacts](docs/phase-07-repository-artefacts.md)
 8. [Phase 08 — Advanced Cilium Policies](docs/phase-08-advanced-cilium-policies.md)
+9. [Phase 09 — Cilium Service Exposure](docs/phase-09-service-exposure.md)
 
-Architecture and troubleshooting:
+The detailed current-state design is documented in:
 
 * [Architecture](docs/architecture.md)
-* [Invalid CiliumNetworkPolicy Default-Deny Attempt](docs/troubleshooting/invalid-cilium-network-policy.md)
+
+Validated troubleshooting cases are documented under:
+
+* [Invalid Cilium Network Policy](docs/troubleshooting/invalid-cilium-network-policy.md)
 * [Deployment Labels, Pod Templates and Cilium Identities](docs/troubleshooting/deployment-vs-pod-template-labels.md)
 
 ---
 
 ## Validation
 
-The current lab state has been validated through cluster, networking, workload, observability, policy, VPN and repository checks.
-
-Infrastructure and cluster:
+The current lab state has been validated through cluster, networking, workload, observability, policy, VPN and service-exposure checks.
 
 * All Kubernetes nodes report `Ready`.
-* Cilium agents and operator report a healthy status.
-* Cilium runs across all Kubernetes nodes.
-* CoreDNS pods are running.
-* `kube-proxy` remains deployed.
-* Basic Deployment, Service and DNS connectivity tests passed.
-
-Observability:
-
+* Cilium reports a healthy status.
+* Cilium kube-proxy replacement reports enabled.
+* The remaining legacy `kube-proxy` DaemonSet is detected and reported explicitly.
 * Hubble Relay and Hubble UI are running.
-* `hubble observe` shows live flow output.
-* Hubble shows `FORWARDED` and `DROPPED` policy verdicts.
-* DNS proxy and Layer 7 HTTP flows are visible.
-* Cross-node traffic shows `to-overlay` routing.
-
-Network policy:
-
-* Basic ingress and egress isolation was validated.
-* Cross-namespace frontend-to-backend TCP/80 traffic is allowed.
-* Untrusted cross-namespace traffic is denied.
-* DNS through CoreDNS is allowed for the controlled frontend.
-* `example.com` HTTPS access is allowed through `toFQDNs`.
-* `github.com` DNS resolution succeeds while HTTPS access is denied.
-* Internal backend access remains allowed by the FQDN egress policy.
-* `GET /public` returns HTTP 200.
-* `GET /admin` and `POST /public` return HTTP 403.
-* The auditor client can reach protected backends across namespaces.
-* The untrusted client cannot reach protected backends.
-* Explicit `ingressDeny` overrides a matching allow policy.
-* Namespaced and cluster-wide Cilium policies report `VALID=True`.
-
-Management VPN:
-
-* WireGuard handshake completed successfully.
-* Internet IPv4 traffic from `mgmt` is routed through the WireGuard tunnel.
-* pfSense Automatic Outbound NAT was validated for the WireGuard network.
-* DNS resolution remained operational.
-* The Kubernetes LAN is reachable from `mgmt` through WireGuard.
-
-Repository artefacts:
-
-* Exported manifests passed Kubernetes server-side dry-run.
-* Validation scripts completed successfully.
-* Cilium and Hubble evidence was captured from the working cluster.
-* Repository artefacts were scanned for sensitive information.
+* CoreDNS and Kubernetes service discovery are operational.
+* Basic and advanced network policy scenarios produced the expected allowed and denied results.
+* Hubble captured forwarded, dropped, proxied and cross-node flows.
+* WireGuard IPv4 full-tunnel routing and pfSense outbound NAT were validated.
+* LoadBalancer IPAM allocated the expected LAN and BGP VIPs.
+* The L2 VIP `10.10.10.200` returned HTTP 200 before and after Lease failover.
+* L2 Lease ownership moved from `k8s-worker1` to `k8s-worker2`.
+* Both worker nodes established BGP sessions with pfSense FRR.
+* pfSense received two routes to `10.30.0.100/32` during normal operation.
+* One BGP route remained available during controlled path withdrawal.
+* Both BGP routes returned after recovery.
+* The BGP VIP returned HTTP 200 before, during and after failover.
+* Phase 9 manifests passed Kubernetes server-side dry-run validation.
+* Automated Phase 9 validation completed with zero failures.
 
 ---
 
 ## Roadmap
 
-Remaining work in this repository:
+The remaining work for this repository is:
 
-1. **Phase 09 — Service Exposure**
+1. Phase 10 — controlled failure scenarios and troubleshooting.
+2. Phase 11 — automation, validation improvements, Makefile and final portfolio polish.
 
-   * Cilium LoadBalancer IPAM.
-   * L2 Announcements.
-   * BGP integration with pfSense.
-2. **Phase 10 — Failure Scenarios and Troubleshooting**
-
-   * Controlled networking and policy failures.
-   * Evidence-based diagnosis and recovery.
-3. **Phase 11 — Automation and Portfolio Polish**
-
-   * Validation automation.
-   * Makefile targets.
-   * Final repository consistency checks.
-   * Portfolio presentation improvements.
-
-Broader GitOps, observability, security and application-platform work will be developed in separate focused repositories.
+GitOps, application delivery, observability and broader security capabilities are intentionally handled in separate projects rather than expanding this repository indefinitely.
 
 ---
 

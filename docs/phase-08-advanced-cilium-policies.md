@@ -19,9 +19,9 @@ Phase 08 implemented and verified:
 * pod-template label and Cilium identity diagnostics;
 * Hubble verification of forwarded, dropped, proxied and cross-node traffic.
 
-The cluster continues to use `kube-proxy`.
+At the Phase 8 checkpoint, the cluster continued to use `kube-proxy` and kube-proxy replacement was not enabled.
 
-Kube-proxy replacement is not enabled.
+Kube-proxy replacement was enabled later as part of Phase 9 and is documented in [Phase 09 — Cilium Service Exposure](phase-09-service-exposure.md).
 
 ---
 
@@ -67,9 +67,9 @@ scripts/validate-advanced-policies.sh
 
 ---
 
-# 8.1 Cross-Namespace Ingress
+## 8.1 Cross-Namespace Ingress
 
-## Namespaces
+### Namespaces
 
 The scenario uses:
 
@@ -87,7 +87,7 @@ app=backend
 
 It is exposed internally on TCP/80 through the `backend` Service in the `backend-zone` namespace.
 
-## Policy Model
+### Policy Model
 
 A standard Kubernetes `NetworkPolicy` provides default-deny ingress for the backend.
 
@@ -112,7 +112,7 @@ It permits traffic only when all of the following conditions match:
 
 Traffic from `untrusted-zone` does not match the allow rule.
 
-## Validation
+### Validation
 
 Observed results:
 
@@ -130,9 +130,9 @@ Hubble recorded the permitted flow as `FORWARDED` and the denied flow as `DROPPE
 
 ---
 
-# 8.2 DNS-Aware and FQDN Egress
+## 8.2 DNS-Aware and FQDN Egress
 
-## Policy
+### Policy
 
 The frontend egress policy is:
 
@@ -155,7 +155,7 @@ The policy allows:
 
 Other external HTTPS destinations are not permitted.
 
-## DNS Proxy Behaviour
+### DNS Proxy Behaviour
 
 DNS traffic is processed through the Cilium DNS proxy.
 
@@ -165,7 +165,7 @@ DNS resolution and destination access are separate decisions.
 
 This means that a name can resolve successfully without the resulting IP address being authorised for application traffic.
 
-## Validation
+### Validation
 
 Observed results:
 
@@ -182,7 +182,7 @@ The successful `github.com` DNS lookup does not grant HTTPS access.
 
 Only the destination selected by the `toFQDNs` rule is authorised on TCP/443.
 
-## `ndots:5`
+### `ndots:5`
 
 Pods use the DNS resolver configuration supplied by Kubernetes.
 
@@ -216,9 +216,9 @@ They do not mean that matching Kubernetes Services exist.
 
 ---
 
-# 8.3 Layer 7 HTTP Policy
+## 8.3 Layer 7 HTTP Policy
 
-## Namespace and Workloads
+### Namespace and Workloads
 
 The Layer 7 scenario uses:
 
@@ -240,7 +240,7 @@ The nginx configuration exposes:
 /admin
 ```
 
-## Policy
+### Policy
 
 The Cilium policy is:
 
@@ -257,7 +257,7 @@ HTTP path:   /public
 
 Other methods and paths are rejected by the Cilium Layer 7 proxy.
 
-## Validation
+### Validation
 
 Observed results:
 
@@ -267,7 +267,7 @@ GET  /admin  → HTTP 403
 POST /public → HTTP 403
 ```
 
-## Hubble Interpretation
+### Hubble Interpretation
 
 Hubble recorded:
 
@@ -281,9 +281,9 @@ It means that the Cilium proxy returned an application-layer denial response to 
 
 ---
 
-# 8.4 CiliumClusterwideNetworkPolicy
+## 8.4 CiliumClusterwideNetworkPolicy
 
-## Namespaces
+### Namespaces
 
 The cluster-wide scenario uses:
 
@@ -306,7 +306,7 @@ The operational client uses:
 access=auditor
 ```
 
-## Policy
+### Policy
 
 The cluster-wide policy is:
 
@@ -324,7 +324,7 @@ One `CiliumClusterwideNetworkPolicy` selects protected backend pods across names
 
 The same policy applies to both team namespaces without duplicating a namespaced policy in each namespace.
 
-## Validation
+### Validation
 
 Observed results:
 
@@ -350,9 +350,9 @@ This indicates that the flow was sent through the Cilium overlay between Kuberne
 
 ---
 
-# 8.5 Explicit `ingressDeny`
+## 8.5 Explicit `ingressDeny`
 
-## Namespace and Workloads
+### Namespace and Workloads
 
 The explicit deny scenario uses:
 
@@ -378,7 +378,7 @@ The blocked client additionally has:
 access=blocked
 ```
 
-## Allow Policy
+### Allow Policy
 
 The policy:
 
@@ -394,7 +394,7 @@ role=client
 
 to access the backend on TCP/80.
 
-## Deny Policy
+### Deny Policy
 
 The separate policy:
 
@@ -410,7 +410,7 @@ access=blocked
 
 to the backend on TCP/80.
 
-## Validation
+### Validation
 
 Observed results:
 
@@ -427,9 +427,9 @@ This remains true even though the allow and deny rules are stored in separate Ci
 
 ---
 
-# Diagnostic Findings
+## Diagnostic Findings
 
-## Deployment Labels and Pod Labels
+### Deployment Labels and Pod Labels
 
 Running:
 
@@ -466,7 +466,7 @@ docs/troubleshooting/deployment-vs-pod-template-labels.md
 
 ---
 
-# Policy Validation
+## Policy Validation
 
 Namespaced Cilium policies can be checked with:
 
@@ -494,7 +494,7 @@ kubectl get networkpolicies -A
 
 ---
 
-# Automated Validation
+## Automated Validation
 
 Run the complete Phase 8 validation from `mgmt`:
 
@@ -519,7 +519,7 @@ The script checks:
 * recent Hubble `DROPPED` flows;
 * HTTP 200 and 403 proxy evidence;
 * `to-overlay` evidence;
-* the continued presence of `kube-proxy`.
+* the presence of `kube-proxy` at the Phase 8 checkpoint.
 
 Expected final result:
 
@@ -529,7 +529,7 @@ All Phase 8 advanced policy validation checks passed.
 
 ---
 
-# Hubble Evidence
+## Hubble Evidence
 
 The scenario captures are stored under:
 
@@ -561,7 +561,7 @@ Hubble files are point-in-time evidence and do not replace live validation.
 
 ---
 
-# Security Controls
+## Security Controls
 
 The Phase 8 repository artefacts must not include:
 
@@ -584,7 +584,7 @@ Only cleaned manifests and approved evidence files are included in the repositor
 
 ---
 
-# Checkpoint
+## Checkpoint
 
 ```text
 Phase 08 checkpoint passed
@@ -602,5 +602,5 @@ Explicit ingressDeny:        PASSED
 CNP and CCNP validity:       PASSED
 Hubble verification:         PASSED
 Pod identity diagnostics:    PASSED
-kube-proxy still deployed:   CONFIRMED
+kube-proxy still deployed:   CONFIRMED AT PHASE 8 CHECKPOINT
 ```
