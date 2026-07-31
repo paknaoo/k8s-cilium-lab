@@ -800,6 +800,84 @@ The architecture does not claim that the legacy DaemonSet has been removed.
 
 ---
 
+## Controlled Troubleshooting Model
+
+Phase 10 validated one minimal and isolated `CiliumNetworkPolicy` troubleshooting workflow.
+
+The temporary scenario used:
+
+```text
+namespace: phase10-netpol
+
+backend Deployment
+backend ClusterIP Service
+client-approved Pod
+client-denied Pod
+```
+
+These resources were removed after testing and are not part of the current persistent architecture.
+
+The scenario introduced a syntactically valid policy containing:
+
+```text
+access=approve
+```
+
+while the intended client used:
+
+```text
+access=approved
+```
+
+The resulting selector matched no approved client identity.
+
+The validated diagnostic sequence was:
+
+```text
+healthy baseline
+→ verify workload and Service state
+→ reproduce the connection timeout
+→ confirm policy validity
+→ inspect Cilium policy-denied traffic
+→ inspect the backend endpoint policy
+→ compare the installed selector with Pod labels
+→ correct the selector
+→ validate allowed and denied clients
+→ delete temporary resources
+→ confirm full cluster recovery
+```
+
+During the failure:
+
+* the backend remained running and ready;
+* the Service remained present;
+* the EndpointSlice retained the backend endpoint;
+* the policy reported successful validation;
+* Cilium recorded TCP SYN drops with the `Policy denied` verdict.
+
+After correcting the selector:
+
+```text
+client-approved → HTTP 200
+client-denied   → timeout / denied
+```
+
+The scenario demonstrated that a valid Cilium policy can still be logically incorrect when its selectors do not match the intended endpoint identities.
+
+The complete case is documented in:
+
+```text
+docs/troubleshooting/ciliumnetworkpolicy-selector-mismatch.md
+```
+
+The supporting evidence is stored under:
+
+```text
+snapshots/phase-10/
+```
+
+Phase 10 did not test node, Cilium agent, BGP, FRR, container runtime, interface or VMware network failures.
+
 ## Observability Model
 
 Hubble Relay aggregates flow data from Cilium agents across the cluster.
@@ -873,6 +951,20 @@ Network policy:
 * Explicit `ingressDeny` precedence was validated.
 * Namespaced and cluster-wide Cilium policies report `VALID=True`.
 
+Controlled troubleshooting:
+
+* A healthy cluster baseline was recorded before the test.
+* Both isolated clients reached the backend before policy enforcement.
+* A valid but logically incorrect selector denied both clients.
+* The backend Pod, Service and EndpointSlice remained healthy during the failure.
+* Cilium recorded `Policy denied` TCP SYN drops.
+* Backend endpoint inspection confirmed ingress enforcement and the installed selector.
+* The root cause was identified as `access=approve` versus `access=approved`.
+* The corrected policy allowed the intended client and continued denying the non-matching client.
+* Temporary resources were removed after validation.
+* All nodes, Cilium, both BGP peers and both LoadBalancer VIPs were healthy after cleanup.
+* Static Phase 10 evidence validation completed with zero failures and one documented warning.
+
 WireGuard:
 
 * WireGuard IPv4 full-tunnel routing was validated.
@@ -904,18 +996,19 @@ Repository artefacts:
 * Validation scripts completed successfully.
 * Hubble and service-exposure evidence was captured.
 * Repository artefacts were scanned for sensitive information.
+* Controlled troubleshooting evidence was captured under `snapshots/phase-10/`.
+* Broken and corrected policies are stored as troubleshooting snapshots rather than deployable manifests.
+* Phase 10 evidence was validated without recreating the failure.
 
 ## Current Scope
 
-This document describes the architecture implemented and validated through Phase 09.
+This document describes the architecture and validated operational workflows implemented through Phase 10.
 
-The remaining repository phases are:
+Phase 10 was intentionally limited to one controlled `CiliumNetworkPolicy` selector-mismatch scenario. No additional node, Cilium agent, BGP, FRR, container runtime, interface or VMware network failure scenarios were performed.
 
-1. **Phase 10 — Failure Scenarios and Troubleshooting**
+The remaining repository phase is:
 
-   * Controlled failures.
-   * Diagnosis and recovery evidence.
-2. **Phase 11 — Automation and Portfolio Polish**
+1. **Phase 11 — Automation and Portfolio Polish**
 
    * Validation automation.
    * Makefile targets.

@@ -134,6 +134,11 @@ The following components have been successfully deployed and validated.
 * The Service VIP `10.30.0.100/32` is advertised through both worker nodes.
 * Controlled BGP path withdrawal and recovery completed without HTTP interruption.
 * Repository manifests, runtime snapshots and validation scripts derived from the working lab.
+* One minimal, controlled `CiliumNetworkPolicy` troubleshooting scenario completed.
+* A syntactically valid but logically incorrect endpoint selector was diagnosed through Cilium datapath and endpoint evidence.
+* Selective access was restored by correcting `access=approve` to `access=approved`.
+* Temporary Phase 10 resources were removed and the cluster, L2 and BGP baselines were revalidated.
+* Static Phase 10 evidence validation completed successfully.
 
 ---
 
@@ -150,6 +155,7 @@ Implementation details are organised by completed project phase:
 7. [Phase 07 — Repository Artefacts](docs/phase-07-repository-artefacts.md)
 8. [Phase 08 — Advanced Cilium Policies](docs/phase-08-advanced-cilium-policies.md)
 9. [Phase 09 — Cilium Service Exposure](docs/phase-09-service-exposure.md)
+10. [Phase 10 — Controlled NetworkPolicy Troubleshooting](docs/phase-10-controlled-networkpolicy-troubleshooting.md)
 
 The detailed current-state design is documented in:
 
@@ -159,6 +165,7 @@ Validated troubleshooting cases are documented under:
 
 * [Invalid Cilium Network Policy](docs/troubleshooting/invalid-cilium-network-policy.md)
 * [Deployment Labels, Pod Templates and Cilium Identities](docs/troubleshooting/deployment-vs-pod-template-labels.md)
+* [CiliumNetworkPolicy Selector Mismatch](docs/troubleshooting/ciliumnetworkpolicy-selector-mismatch.md)
 
 ---
 
@@ -185,6 +192,17 @@ The current lab state has been validated through cluster, networking, workload, 
 * The BGP VIP returned HTTP 200 before, during and after failover.
 * Phase 9 manifests passed Kubernetes server-side dry-run validation.
 * Automated Phase 9 validation completed with zero failures.
+* A healthy cluster and service-exposure baseline was recorded before the Phase 10 test.
+* Both isolated clients reached the backend before ingress policy enforcement.
+* A valid policy containing the incorrect selector `access=approve` denied both clients.
+* The backend workload, Service and EndpointSlice remained healthy during the failure.
+* Cilium recorded TCP SYN drops with the `Policy denied` verdict.
+* Backend endpoint inspection confirmed ingress enforcement and the installed incorrect selector.
+* Correcting the selector to `access=approved` restored HTTP 200 for the intended client.
+* The non-matching client remained denied after the correction.
+* All temporary Phase 10 resources were removed.
+* All Kubernetes nodes, Cilium, both BGP peers and both LoadBalancer VIPs were healthy after cleanup.
+* Static Phase 10 evidence validation completed with zero failures and one documented warning.
 
 ---
 
@@ -192,8 +210,7 @@ The current lab state has been validated through cluster, networking, workload, 
 
 The remaining work for this repository is:
 
-1. Phase 10 — controlled failure scenarios and troubleshooting.
-2. Phase 11 — automation, validation improvements, Makefile and final portfolio polish.
+1. Phase 11 — automation, validation improvements, Makefile and final portfolio polish.
 
 GitOps, application delivery, observability and broader security capabilities are intentionally handled in separate projects rather than expanding this repository indefinitely.
 
