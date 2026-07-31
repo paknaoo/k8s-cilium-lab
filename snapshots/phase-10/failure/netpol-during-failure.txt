@@ -1,0 +1,58 @@
+=== PHASE 10 NETWORKPOLICY — DURING FAILURE ===
+Captured: 2026-07-30T12:12:11+01:00
+
+=== PODS AND LABELS ===
+NAME                       READY   STATUS    RESTARTS   AGE     IP             NODE          NOMINATED NODE   READINESS GATES   LABELS
+backend-6879d5d48c-bnm2m   1/1     Running   0          5m18s   10.244.2.113   k8s-worker2   <none>           <none>            app=backend,pod-template-hash=6879d5d48c
+client-approved            1/1     Running   0          5m18s   10.244.2.27    k8s-worker2   <none>           <none>            access=approved,role=client
+client-denied              1/1     Running   0          5m18s   10.244.2.191   k8s-worker2   <none>           <none>            access=denied,role=client
+
+=== SERVICE ===
+NAME      TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE     SELECTOR
+backend   ClusterIP   10.96.66.127   <none>        80/TCP    5m18s   app=backend
+
+=== ENDPOINTSLICE ===
+NAME            ADDRESSTYPE   PORTS   ENDPOINTS      AGE
+backend-jrqc2   IPv4          80      10.244.2.113   5m18s
+
+=== BROKEN POLICY ===
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"cilium.io/v2","kind":"CiliumNetworkPolicy","metadata":{"annotations":{},"name":"backend-ingress","namespace":"phase10-netpol"},"spec":{"endpointSelector":{"matchLabels":{"app":"backend"}},"ingress":[{"fromEndpoints":[{"matchLabels":{"access":"approve"}}],"toPorts":[{"ports":[{"port":"80","protocol":"TCP"}]}]}]}}
+  creationTimestamp: "2026-07-30T11:11:26Z"
+  generation: 1
+  name: backend-ingress
+  namespace: phase10-netpol
+  resourceVersion: "229552"
+  uid: c46ceb83-c1ba-42ed-82bf-5e2184d53fa4
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        access: approve
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-30T11:11:26Z"
+    message: Policy validation succeeded
+    status: "True"
+    type: Valid
+
+=== CLIENT APPROVED -> BACKEND ===
+HTTP 000
+curl: (28) Connection timed out after 5002 milliseconds
+curl_exit=28
+
+=== CLIENT DENIED -> BACKEND ===
+HTTP 000
+curl_exit=28
+curl: (28) Connection timed out after 5002 milliseconds

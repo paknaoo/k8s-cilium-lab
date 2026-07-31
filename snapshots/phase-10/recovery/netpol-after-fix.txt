@@ -1,0 +1,49 @@
+=== PHASE 10 NETWORKPOLICY — AFTER FIX ===
+Captured: 2026-07-30T13:39:46+01:00
+
+=== ACTIVE POLICY ===
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"cilium.io/v2","kind":"CiliumNetworkPolicy","metadata":{"annotations":{},"name":"backend-ingress","namespace":"phase10-netpol"},"spec":{"endpointSelector":{"matchLabels":{"app":"backend"}},"ingress":[{"fromEndpoints":[{"matchLabels":{"access":"approved"}}],"toPorts":[{"ports":[{"port":"80","protocol":"TCP"}]}]}]}}
+  creationTimestamp: "2026-07-30T11:11:26Z"
+  generation: 2
+  name: backend-ingress
+  namespace: phase10-netpol
+  resourceVersion: "243396"
+  uid: c46ceb83-c1ba-42ed-82bf-5e2184d53fa4
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        access: approved
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-30T11:11:26Z"
+    message: Policy validation succeeded
+    status: "True"
+    type: Valid
+
+=== PODS ===
+NAME                       READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES   LABELS
+backend-6879d5d48c-bnm2m   1/1     Running   0          92m   10.244.2.113   k8s-worker2   <none>           <none>            app=backend,pod-template-hash=6879d5d48c
+client-approved            1/1     Running   0          92m   10.244.2.27    k8s-worker2   <none>           <none>            access=approved,role=client
+client-denied              1/1     Running   0          92m   10.244.2.191   k8s-worker2   <none>           <none>            access=denied,role=client
+
+=== CLIENT APPROVED -> BACKEND ===
+HTTP 200
+curl_exit=0
+
+=== CLIENT DENIED -> BACKEND ===
+HTTP 000
+curl: (28) Connection timed out after 5000 milliseconds
+curl_exit=28

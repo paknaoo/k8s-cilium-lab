@@ -1,0 +1,51 @@
+=== PHASE 10 BASELINE AFTER NETWORKPOLICY ===
+Captured: 2026-07-30T13:41:24+01:00
+
+=== KUBERNETES NODES ===
+NAME          STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION              CONTAINER-RUNTIME
+k8s-master    Ready    control-plane   52d   v1.36.1   10.10.10.20   <none>        Ubuntu 24.04.4 LTS   6.8.0-136-generic (amd64)   containerd://2.2.1
+k8s-worker1   Ready    <none>          52d   v1.36.1   10.10.10.21   <none>        Ubuntu 24.04.4 LTS   6.8.0-136-generic (amd64)   containerd://2.2.1
+k8s-worker2   Ready    <none>          52d   v1.36.1   10.10.10.22   <none>        Ubuntu 24.04.4 LTS   6.8.0-136-generic (amd64)   containerd://2.2.1
+
+=== CILIUM STATUS ===
+[33m    /¯¯\
+[36m /¯¯[33m\__/[32m¯¯\[0m    Cilium:             [32mOK[0m
+[36m \__[31m/¯¯\[32m__/[0m    Operator:           [32mOK[0m
+[32m /¯¯[31m\__/[35m¯¯\[0m    Envoy DaemonSet:    [32mOK[0m
+[32m \__[34m/¯¯\[35m__/[0m    Hubble Relay:       [32mOK[0m
+[34m[34m[34m    \__/[0m       ClusterMesh:        [36mdisabled[0m
+
+DaemonSet              cilium                   Desired: 3, Ready: [32m3/3[0m, Available: [32m3/3[0m
+DaemonSet              cilium-envoy             Desired: 3, Ready: [32m3/3[0m, Available: [32m3/3[0m
+Deployment             cilium-operator          Desired: 1, Ready: [32m1/1[0m, Available: [32m1/1[0m
+Deployment             hubble-relay             Desired: 1, Ready: [32m1/1[0m, Available: [32m1/1[0m
+Deployment             hubble-ui                Desired: 1, Ready: [32m1/1[0m, Available: [32m1/1[0m
+Containers:            cilium                   Running: [32m3[0m
+                       cilium-envoy             Running: [32m3[0m
+                       cilium-operator          Running: [32m1[0m
+                       clustermesh-apiserver    
+                       hubble-relay             Running: [32m1[0m
+                       hubble-ui                Running: [32m1[0m
+Cluster Pods:          22/22 managed by Cilium
+Helm chart version:    1.19.3
+Image versions         cilium             quay.io/cilium/cilium:v1.19.3@sha256:2e61680593cddca8b6c055f6d4c849d87a26a1c91c7e3b8b56c7fb76ab7b7b10: 3
+                       cilium-envoy       quay.io/cilium/cilium-envoy:v1.36.6-1776000132-2437d2edeaf4d9b56ef279bd0d71127440c067aa@sha256:ba0ab8adac082d50d525fd2c5ba096c8facea3a471561b7c61c7a5b9c2e0de0d: 3
+                       cilium-operator    quay.io/cilium/operator-generic:v1.19.3@sha256:205b09b0ed6accbf9fe688d312a9f0fcfc6a316fc081c23fbffb472af5dd62cd: 1
+                       hubble-relay       quay.io/cilium/hubble-relay:v1.19.3@sha256:5ee21d57b6ef2aa6db67e603a735fdceb162454b352b7335b651456e308f681b: 1
+                       hubble-ui          quay.io/cilium/hubble-ui-backend:v0.13.3@sha256:db1454e45dc39ca41fbf7cad31eec95d99e5b9949c39daaad0fa81ef29d56953: 1
+                       hubble-ui          quay.io/cilium/hubble-ui:v0.13.3@sha256:661d5de7050182d495c6497ff0b007a7a1e379648e60830dd68c4d78ae21761d: 1
+
+=== CILIUM BGP PEERS ===
+Node          Local AS   Peer AS   Peer Address   Session State   Uptime     Family         Received   Advertised
+k8s-worker1   64513      64512     10.10.10.254   established     1h40m56s   ipv4/unicast   0          1    
+k8s-worker2   64513      64512     10.10.10.254   established     1h39m35s   ipv4/unicast   0          1    
+
+=== L2 ANNOUNCEMENT LEASE ===
+holder=k8s-worker1
+renew=2026-07-30T12:41:26.764958Z
+
+=== L2 VIP HTTP ===
+L2 VIP: HTTP 200
+
+=== BGP VIP HTTP ===
+BGP VIP: HTTP 200

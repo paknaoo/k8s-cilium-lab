@@ -1,0 +1,100 @@
+============================================================
+Phase 10 — Evidence Validation
+============================================================
+Repository: /home/adam/k8s-cilium-lab
+Evidence:   /home/adam/k8s-cilium-lab/snapshots/phase-10
+
+--- Evidence inventory ---
+PASS: Evidence present: snapshots/phase-10/baseline/baseline-before-networkpolicy.txt
+PASS: Evidence present: snapshots/phase-10/baseline/netpol-before-policy.txt
+PASS: Evidence present: snapshots/phase-10/policy/netpol-broken-policy.yaml
+PASS: Evidence present: snapshots/phase-10/policy/netpol-fixed-policy.yaml
+PASS: Evidence present: snapshots/phase-10/failure/netpol-during-failure.txt
+PASS: Evidence present: snapshots/phase-10/failure/netpol-client-policy-drops.txt
+PASS: Evidence present: snapshots/phase-10/failure/netpol-datapath-drops.txt
+PASS: Evidence present: snapshots/phase-10/diagnosis/netpol-cilium-host-address.txt
+PASS: Evidence present: snapshots/phase-10/diagnosis/netpol-cilium-endpoints.txt
+PASS: Evidence present: snapshots/phase-10/diagnosis/netpol-backend-endpoint.txt
+PASS: Evidence present: snapshots/phase-10/diagnosis/netpol-root-cause.txt
+PASS: Evidence present: snapshots/phase-10/recovery/netpol-after-fix.txt
+PASS: Evidence present: snapshots/phase-10/recovery/baseline-after-networkpolicy.txt
+
+--- Initial cluster baseline ---
+PASS: k8s-master was Ready before the test
+PASS: k8s-worker1 was Ready before the test
+PASS: k8s-worker2 was Ready before the test
+PASS: Cilium was healthy before the test
+PASS: Cilium Operator was healthy before the test
+PASS: worker1 BGP peer was established before the test
+PASS: worker2 BGP peer was established before the test
+PASS: L2 VIP returned HTTP 200 before the test
+PASS: BGP VIP returned HTTP 200 before the test
+
+--- Connectivity before policy enforcement ---
+PASS: Approved client reached the backend before policy enforcement
+PASS: Denied client reached the backend before policy enforcement
+PASS: Backend workload was running before policy enforcement
+PASS: EndpointSlice evidence was captured before policy enforcement
+
+--- Broken and fixed policy selectors ---
+PASS: Broken policy contains the intentional access=approve selector
+PASS: Fixed policy contains the corrected access=approved selector
+PASS: Broken policy does not contain the corrected selector
+PASS: Fixed policy does not contain the broken selector
+
+--- Controlled failure evidence ---
+PASS: Approved client timed out with the broken policy
+PASS: Denied client timed out with the broken policy
+PASS: Approved client recorded curl exit 28
+PASS: Denied client recorded curl exit 28
+PASS: Both failed requests recorded curl exit 28 (2 match(es))
+PASS: Backend workload remained running during the failure
+PASS: Backend EndpointSlice information remained present during the failure
+PASS: CiliumNetworkPolicy validation succeeded during the failure
+PASS: CiliumNetworkPolicy status remained valid during the failure
+
+--- Datapath diagnosis ---
+PASS: Cilium recorded policy-denied datapath traffic
+PASS: Dropped TCP SYN traffic was captured
+PASS: Datapath evidence includes the approved client flow to TCP/80
+PASS: Backend endpoint had ingress policy enforcement enabled
+PASS: Backend endpoint policy status was OK
+PASS: Backend endpoint policy was derived from CiliumNetworkPolicy
+PASS: Backend endpoint policy referenced backend-ingress
+PASS: Backend endpoint policy reflected the broken source selector
+
+--- Root cause ---
+PASS: Root-cause evidence contains the incorrect selector
+PASS: Root-cause evidence contains the actual client label
+PASS: Root-cause evidence identifies a selector or label mismatch
+
+--- Corrective action and selective access ---
+PASS: Approved client returned HTTP 200 after the correction
+PASS: Approved client recorded curl exit 0 after the correction
+PASS: Denied client remained blocked after the correction
+PASS: Denied client recorded curl exit 28 after the correction
+PASS: Active policy contained the corrected selector
+PASS: Corrected policy validation succeeded
+PASS: Corrected policy status was valid
+
+--- Recovery baseline ---
+PASS: k8s-master was Ready after cleanup
+PASS: k8s-worker1 was Ready after cleanup
+PASS: k8s-worker2 was Ready after cleanup
+PASS: Cilium was healthy after cleanup
+PASS: Cilium Operator was healthy after cleanup
+PASS: worker1 BGP peer was established after cleanup
+PASS: worker2 BGP peer was established after cleanup
+PASS: L2 VIP returned HTTP 200 after cleanup
+PASS: BGP VIP returned HTTP 200 after cleanup
+WARN: Recovery baseline does not contain an explicit namespace cleanup marker
+
+--- Empty-file and sensitive-data checks ---
+PASS: No Phase 10 evidence file is empty
+PASS: No high-risk credential or private-key patterns were found
+
+============================================================
+Failures: 0
+Warnings: 1
+============================================================
+Phase 10 evidence validation completed successfully.

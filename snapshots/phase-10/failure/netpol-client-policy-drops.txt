@@ -1,0 +1,12 @@
+Policy verdict log: flow 0x8e664ff4 local EP ID 744, remote ID 18819, proto 6, ingress, action deny, auth: disabled, match none, 10.244.2.27:33848 -> 10.244.2.113:80 tcp SYN
+xx drop (Policy denied) flow 0x8e664ff4 to endpoint 744, ifindex 11, file bpf_lxc.c:2381, , identity 18819->10568: 10.244.2.27:33848 -> 10.244.2.113:80 tcp SYN
+Policy verdict log: flow 0xc7fcccbb local EP ID 744, remote ID 18819, proto 6, ingress, action deny, auth: disabled, match none, 10.244.2.27:33848 -> 10.244.2.113:80 tcp SYN
+xx drop (Policy denied) flow 0xc7fcccbb to endpoint 744, ifindex 11, file bpf_lxc.c:2381, , identity 18819->10568: 10.244.2.27:33848 -> 10.244.2.113:80 tcp SYN
+Policy verdict log: flow 0x62346c46 local EP ID 744, remote ID 18819, proto 6, ingress, action deny, auth: disabled, match none, 10.244.2.27:37730 -> 10.244.2.113:80 tcp SYN
+xx drop (Policy denied) flow 0x62346c46 to endpoint 744, ifindex 11, file bpf_lxc.c:2381, , identity 18819->10568: 10.244.2.27:37730 -> 10.244.2.113:80 tcp SYN
+Policy verdict log: flow 0xf24e6c38 local EP ID 744, remote ID 18819, proto 6, ingress, action deny, auth: disabled, match none, 10.244.2.27:37730 -> 10.244.2.113:80 tcp SYN
+xx drop (Policy denied) flow 0xf24e6c38 to endpoint 744, ifindex 11, file bpf_lxc.c:2381, , identity 18819->10568: 10.244.2.27:37730 -> 10.244.2.113:80 tcp SYN
+Policy verdict log: flow 0x6bee0dd2 local EP ID 744, remote ID 18819, proto 6, ingress, action deny, auth: disabled, match none, 10.244.2.27:37742 -> 10.244.2.113:80 tcp SYN
+xx drop (Policy denied) flow 0x6bee0dd2 to endpoint 744, ifindex 11, file bpf_lxc.c:2381, , identity 18819->10568: 10.244.2.27:37742 -> 10.244.2.113:80 tcp SYN
+Policy verdict log: flow 0x7d32e9d6 local EP ID 744, remote ID 18819, proto 6, ingress, action deny, auth: disabled, match none, 10.244.2.27:37742 -> 10.244.2.113:80 tcp SYN
+xx drop (Policy denied) flow 0x7d32e9d6 to endpoint 744, ifindex 11, file bpf_lxc.c:2381, , identity 18819->10568: 10.244.2.27:37742 -> 10.244.2.113:80 tcp SYN

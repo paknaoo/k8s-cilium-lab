@@ -1,0 +1,3 @@
+4: cilium_host@cilium_net: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    inet 10.244.2.108/32 scope global cilium_host
+       valid_lft forever preferred_lft forever

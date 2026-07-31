@@ -1,0 +1,21 @@
+ENDPOINT   POLICY (ingress)   POLICY (egress)   IDENTITY   LABELS (source:key[=value])                                                     IPv6   IPv4           STATUS   
+           ENFORCEMENT        ENFORCEMENT                                                                                                                        
+118        Disabled           Disabled          1          reserved:host                                                                                         ready   
+174        Disabled           Disabled          13439      k8s:access=denied                                                                      10.244.2.191   ready   
+                                                           k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=phase10-netpol                                 
+                                                           k8s:io.cilium.k8s.policy.cluster=kubernetes                                                                   
+                                                           k8s:io.cilium.k8s.policy.serviceaccount=default                                                               
+                                                           k8s:io.kubernetes.pod.namespace=phase10-netpol                                                                
+                                                           k8s:role=client                                                                                               
+272        Disabled           Disabled          18819      k8s:access=approved                                                                    10.244.2.27    ready   
+                                                           k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=phase10-netpol                                 
+                                                           k8s:io.cilium.k8s.policy.cluster=kubernetes                                                                   
+                                                           k8s:io.cilium.k8s.policy.serviceaccount=default                                                               
+                                                           k8s:io.kubernetes.pod.namespace=phase10-netpol                                                                
+                                                           k8s:role=client                                                                                               
+744        Enabled            Disabled          10568      k8s:app=backend                                                                        10.244.2.113   ready   
+                                                           k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=phase10-netpol                                 
+                                                           k8s:io.cilium.k8s.policy.cluster=kubernetes                                                                   
+                                                           k8s:io.cilium.k8s.policy.serviceaccount=default                                                               
+                                                           k8s:io.kubernetes.pod.namespace=phase10-netpol                                                                
+3239       Disabled           Disabled          4          reserved:health                                                                        10.244.2.36    ready   

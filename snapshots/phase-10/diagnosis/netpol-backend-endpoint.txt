@@ -1,0 +1,255 @@
+[
+  {
+    "id": 744,
+    "spec": {
+      "label-configuration": {},
+      "options": {
+        "ConntrackAccounting": "Disabled",
+        "Debug": "Disabled",
+        "DebugLB": "Disabled",
+        "DebugPolicy": "Disabled",
+        "DropNotification": "Enabled",
+        "MonitorAggregationLevel": "Medium",
+        "PolicyAccounting": "Enabled",
+        "PolicyAuditMode": "Disabled",
+        "PolicyVerdictNotification": "Enabled",
+        "SourceIPVerification": "Enabled",
+        "TraceNotification": "Enabled"
+      }
+    },
+    "status": {
+      "controllers": [
+        {
+          "configuration": {
+            "error-retry": true,
+            "error-retry-base": "2s",
+            "interval": "1s"
+          },
+          "name": "endpoint-744-regeneration-recovery",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "0001-01-01T00:00:00.000Z"
+          },
+          "uuid": "41d60b13-f641-4505-b2b2-bf50dc71c0f3"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "5m0s"
+          },
+          "name": "resolve-identity-744",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-07-30T12:31:54.909Z",
+            "success-count": 18
+          },
+          "uuid": "4d1d5a0a-73ec-420a-97a0-c0c238281973"
+        },
+        {
+          "configuration": {
+            "error-retry": true
+          },
+          "name": "resolve-labels-phase10-netpol/backend-6879d5d48c-bnm2m",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-07-30T11:06:54.892Z",
+            "success-count": 1
+          },
+          "uuid": "77a76809-b601-4bfa-86ad-0f9c21cad96a"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "15m0s"
+          },
+          "name": "sync-policymap-744",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-07-30T12:21:55.796Z",
+            "success-count": 6
+          },
+          "uuid": "47b8e8c9-76f9-40a9-b011-5b94cb2fceaa"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "10s"
+          },
+          "name": "sync-to-k8s-ciliumendpoint (744)",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-07-30T12:36:15.420Z",
+            "success-count": 538
+          },
+          "uuid": "9409ea33-950a-492c-92a9-1b2e2df83463"
+        }
+      ],
+      "external-identifiers": {
+        "cni-attachment-id": "577d112a1dffa2b6c870170a66106897842edc57e68dff117153f8260a3c0973:eth0",
+        "container-id": "577d112a1dffa2b6c870170a66106897842edc57e68dff117153f8260a3c0973",
+        "k8s-namespace": "phase10-netpol",
+        "k8s-pod-name": "backend-6879d5d48c-bnm2m",
+        "pod-name": "phase10-netpol/backend-6879d5d48c-bnm2m"
+      },
+      "health": {
+        "bpf": "OK",
+        "connected": true,
+        "overallHealth": "OK",
+        "policy": "OK"
+      },
+      "identity": {
+        "id": 10568,
+        "labels": [
+          "k8s:app=backend",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=phase10-netpol",
+          "k8s:io.cilium.k8s.policy.cluster=kubernetes",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=phase10-netpol"
+        ]
+      },
+      "labels": {
+        "derived": [
+          "k8s:pod-template-hash=6879d5d48c"
+        ],
+        "realized": {},
+        "security-relevant": [
+          "k8s:app=backend",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=phase10-netpol",
+          "k8s:io.cilium.k8s.policy.cluster=kubernetes",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=phase10-netpol"
+        ]
+      },
+      "log": [
+        {
+          "code": "OK",
+          "message": "Successfully regenerated endpoint program (Reason: periodic endpoint regeneration)",
+          "state": "ready",
+          "timestamp": "2026-07-30T12:35:50Z"
+        }
+      ],
+      "namedPorts": [
+        {
+          "name": "http",
+          "port": 80,
+          "protocol": "TCP"
+        }
+      ],
+      "networking": {
+        "addressing": [
+          {
+            "ipv4": "10.244.2.113",
+            "ipv4-pool-name": "default"
+          }
+        ],
+        "container-interface-name": "eth0",
+        "host-mac": "b2:e7:cb:29:34:23",
+        "interface-index": 9,
+        "interface-name": "lxc43ecb14fdc65",
+        "mac": "aa:2d:88:ff:5a:f7"
+      },
+      "policy": {
+        "proxy-policy-revision": 13,
+        "proxy-statistics": [],
+        "realized": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            1
+          ],
+          "build": 13,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 10568,
+          "l4": {
+            "egress": [],
+            "ingress": [
+              {
+                "derived-from-rules": [
+                  [
+                    "k8s:io.cilium.k8s.policy.derived-from=CiliumNetworkPolicy",
+                    "k8s:io.cilium.k8s.policy.name=backend-ingress",
+                    "k8s:io.cilium.k8s.policy.namespace=phase10-netpol",
+                    "k8s:io.cilium.k8s.policy.uid=c46ceb83-c1ba-42ed-82bf-5e2184d53fa4"
+                  ]
+                ],
+                "rule": "{\"port\":80,\"protocol\":\"TCP\",\"l7-rules\":[{\"\\u0026LabelSelector{MatchLabels:map[string]string{any.access: approve,k8s.io.cilium.k8s.policy.cluster: kubernetes,k8s.io.kubernetes.pod.namespace: phase10-netpol,},MatchExpressions:[]LabelSelectorRequirement{},}\":null}]}",
+                "rules-by-selector": {
+                  "\u0026LabelSelector{MatchLabels:map[string]string{any.access: approve,k8s.io.cilium.k8s.policy.cluster: kubernetes,k8s.io.kubernetes.pod.namespace: phase10-netpol,},MatchExpressions:[]LabelSelectorRequirement{},}": [
+                    [
+                      "k8s:io.cilium.k8s.policy.derived-from=CiliumNetworkPolicy",
+                      "k8s:io.cilium.k8s.policy.name=backend-ingress",
+                      "k8s:io.cilium.k8s.policy.namespace=phase10-netpol",
+                      "k8s:io.cilium.k8s.policy.uid=c46ceb83-c1ba-42ed-82bf-5e2184d53fa4"
+                    ]
+                  ]
+                }
+              }
+            ]
+          },
+          "policy-enabled": "ingress",
+          "policy-revision": 13
+        },
+        "spec": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            1
+          ],
+          "build": 13,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 10568,
+          "l4": {
+            "egress": [],
+            "ingress": [
+              {
+                "derived-from-rules": [
+                  [
+                    "k8s:io.cilium.k8s.policy.derived-from=CiliumNetworkPolicy",
+                    "k8s:io.cilium.k8s.policy.name=backend-ingress",
+                    "k8s:io.cilium.k8s.policy.namespace=phase10-netpol",
+                    "k8s:io.cilium.k8s.policy.uid=c46ceb83-c1ba-42ed-82bf-5e2184d53fa4"
+                  ]
+                ],
+                "rule": "{\"port\":80,\"protocol\":\"TCP\",\"l7-rules\":[{\"\\u0026LabelSelector{MatchLabels:map[string]string{any.access: approve,k8s.io.cilium.k8s.policy.cluster: kubernetes,k8s.io.kubernetes.pod.namespace: phase10-netpol,},MatchExpressions:[]LabelSelectorRequirement{},}\":null}]}",
+                "rules-by-selector": {
+                  "\u0026LabelSelector{MatchLabels:map[string]string{any.access: approve,k8s.io.cilium.k8s.policy.cluster: kubernetes,k8s.io.kubernetes.pod.namespace: phase10-netpol,},MatchExpressions:[]LabelSelectorRequirement{},}": [
+                    [
+                      "k8s:io.cilium.k8s.policy.derived-from=CiliumNetworkPolicy",
+                      "k8s:io.cilium.k8s.policy.name=backend-ingress",
+                      "k8s:io.cilium.k8s.policy.namespace=phase10-netpol",
+                      "k8s:io.cilium.k8s.policy.uid=c46ceb83-c1ba-42ed-82bf-5e2184d53fa4"
+                    ]
+                  ]
+                }
+              }
+            ]
+          },
+          "policy-enabled": "ingress",
+          "policy-revision": 13
+        }
+      },
+      "realized": {
+        "label-configuration": {},
+        "options": {
+          "ConntrackAccounting": "Disabled",
+          "Debug": "Disabled",
+          "DebugLB": "Disabled",
+          "DebugPolicy": "Disabled",
+          "DropNotification": "Enabled",
+          "MonitorAggregationLevel": "Medium",
+          "PolicyAccounting": "Enabled",
+          "PolicyAuditMode": "Disabled",
+          "PolicyVerdictNotification": "Enabled",
+          "SourceIPVerification": "Enabled",
+          "TraceNotification": "Enabled"
+        }
+      },
+      "state": "ready"
+    }
+  }
+]
+

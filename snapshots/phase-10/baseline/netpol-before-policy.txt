@@ -1,0 +1,22 @@
+=== PHASE 10 NETWORKPOLICY — BEFORE POLICY ===
+Captured: 2026-07-30T12:07:17+01:00
+
+=== PODS ===
+NAME                       READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
+backend-6879d5d48c-bnm2m   1/1     Running   0          24s   10.244.2.113   k8s-worker2   <none>           <none>
+client-approved            1/1     Running   0          24s   10.244.2.27    k8s-worker2   <none>           <none>
+client-denied              1/1     Running   0          24s   10.244.2.191   k8s-worker2   <none>           <none>
+
+=== SERVICE ===
+NAME      TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+backend   ClusterIP   10.96.66.127   <none>        80/TCP    24s   app=backend
+
+=== ENDPOINTSLICE ===
+NAME            ADDRESSTYPE   PORTS   ENDPOINTS      AGE
+backend-jrqc2   IPv4          80      10.244.2.113   25s
+
+=== CLIENT APPROVED -> BACKEND ===
+HTTP 200
+
+=== CLIENT DENIED -> BACKEND ===
+HTTP 200

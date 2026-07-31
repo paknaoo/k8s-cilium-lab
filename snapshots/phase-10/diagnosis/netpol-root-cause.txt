@@ -1,0 +1,19 @@
+=== NETWORKPOLICY ROOT CAUSE ===
+Captured: 2026-07-30T13:38:52+01:00
+
+Backend endpoint:
+  app=backend
+  ingress policy enforcement enabled
+
+Broken policy permits:
+  access=approve
+
+Actual approved client label:
+  access=approved
+
+Observed result:
+  Both clients timed out.
+  Cilium datapath recorded Policy denied.
+
+Root cause:
+  The source endpoint selector contained a label-value typo.
